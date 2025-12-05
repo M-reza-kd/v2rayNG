@@ -8,14 +8,15 @@ import com.v2ray.ang.dto.ProfileItem
 import com.v2ray.ang.dto.RulesetItem
 import com.v2ray.ang.dto.ServerAffiliationInfo
 import com.v2ray.ang.dto.SubscriptionItem
+import com.v2ray.ang.dto.UserCredentials
 import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.Utils
 
 object MmkvManager {
 
-    //region private
+    // region private
 
-    //private const val ID_PROFILE_CONFIG = "PROFILE_CONFIG"
+    // private const val ID_PROFILE_CONFIG = "PROFILE_CONFIG"
     private const val ID_MAIN = "MAIN"
     private const val ID_PROFILE_FULL_CONFIG = "PROFILE_FULL_CONFIG"
     private const val ID_SERVER_RAW = "SERVER_RAW"
@@ -26,19 +27,23 @@ object MmkvManager {
     private const val KEY_SELECTED_SERVER = "SELECTED_SERVER"
     private const val KEY_ANG_CONFIGS = "ANG_CONFIGS"
     private const val KEY_SUB_IDS = "SUB_IDS"
+    private const val KEY_USER_CREDENTIALS = "USER_CREDENTIALS"
 
-    //private val profileStorage by lazy { MMKV.mmkvWithID(ID_PROFILE_CONFIG, MMKV.MULTI_PROCESS_MODE) }
+    // private val profileStorage by lazy { MMKV.mmkvWithID(ID_PROFILE_CONFIG,
+    // MMKV.MULTI_PROCESS_MODE) }
     private val mainStorage by lazy { MMKV.mmkvWithID(ID_MAIN, MMKV.MULTI_PROCESS_MODE) }
-    private val profileFullStorage by lazy { MMKV.mmkvWithID(ID_PROFILE_FULL_CONFIG, MMKV.MULTI_PROCESS_MODE) }
+    private val profileFullStorage by lazy {
+        MMKV.mmkvWithID(ID_PROFILE_FULL_CONFIG, MMKV.MULTI_PROCESS_MODE)
+    }
     private val serverRawStorage by lazy { MMKV.mmkvWithID(ID_SERVER_RAW, MMKV.MULTI_PROCESS_MODE) }
     private val serverAffStorage by lazy { MMKV.mmkvWithID(ID_SERVER_AFF, MMKV.MULTI_PROCESS_MODE) }
     private val subStorage by lazy { MMKV.mmkvWithID(ID_SUB, MMKV.MULTI_PROCESS_MODE) }
     private val assetStorage by lazy { MMKV.mmkvWithID(ID_ASSET, MMKV.MULTI_PROCESS_MODE) }
     private val settingsStorage by lazy { MMKV.mmkvWithID(ID_SETTING, MMKV.MULTI_PROCESS_MODE) }
 
-    //endregion
+    // endregion
 
-    //region Server
+    // region Server
 
     /**
      * Gets the selected server GUID.
@@ -98,16 +103,16 @@ object MmkvManager {
         return JsonUtil.fromJson(json, ProfileItem::class.java)
     }
 
-//    fun decodeProfileConfig(guid: String): ProfileLiteItem? {
-//        if (guid.isBlank()) {
-//            return null
-//        }
-//        val json = profileStorage.decodeString(guid)
-//        if (json.isNullOrBlank()) {
-//            return null
-//        }
-//        return JsonUtil.fromJson(json, ProfileLiteItem::class.java)
-//    }
+    //    fun decodeProfileConfig(guid: String): ProfileLiteItem? {
+    //        if (guid.isBlank()) {
+    //            return null
+    //        }
+    //        val json = profileStorage.decodeString(guid)
+    //        if (json.isNullOrBlank()) {
+    //            return null
+    //        }
+    //        return JsonUtil.fromJson(json, ProfileLiteItem::class.java)
+    //    }
 
     /**
      * Encodes the server configuration.
@@ -127,14 +132,14 @@ object MmkvManager {
                 mainStorage.encode(KEY_SELECTED_SERVER, key)
             }
         }
-//        val profile = ProfileLiteItem(
-//            configType = config.configType,
-//            subscriptionId = config.subscriptionId,
-//            remarks = config.remarks,
-//            server = config.getProxyOutbound()?.getServerAddress(),
-//            serverPort = config.getProxyOutbound()?.getServerPort(),
-//        )
-//        profileStorage.encode(key, JsonUtil.toJson(profile))
+        //        val profile = ProfileLiteItem(
+        //            configType = config.configType,
+        //            subscriptionId = config.subscriptionId,
+        //            remarks = config.remarks,
+        //            server = config.getProxyOutbound()?.getServerAddress(),
+        //            serverPort = config.getProxyOutbound()?.getServerPort(),
+        //        )
+        //        profileStorage.encode(key, JsonUtil.toJson(profile))
         return key
     }
 
@@ -154,7 +159,7 @@ object MmkvManager {
         serverList.remove(guid)
         encodeServerList(serverList)
         profileFullStorage.remove(guid)
-        //profileStorage.remove(guid)
+        // profileStorage.remove(guid)
         serverAffStorage.remove(guid)
     }
 
@@ -231,7 +236,7 @@ object MmkvManager {
         val count = profileFullStorage.allKeys()?.count() ?: 0
         mainStorage.clearAll()
         profileFullStorage.clearAll()
-        //profileStorage.clearAll()
+        // profileStorage.clearAll()
         serverAffStorage.clearAll()
         return count
     }
@@ -284,21 +289,17 @@ object MmkvManager {
         return serverRawStorage.decodeString(guid)
     }
 
-    //endregion
+    // endregion
 
-    //region Subscriptions
+    // region Subscriptions
 
-    /**
-     * Initializes the subscription list.
-     */
+    /** Initializes the subscription list. */
     private fun initSubsList() {
         val subsList = decodeSubsList()
         if (subsList.isNotEmpty()) {
             return
         }
-        subStorage.allKeys()?.forEach { key ->
-            subsList.add(key)
-        }
+        subStorage.allKeys()?.forEach { key -> subsList.add(key) }
         encodeSubsList(subsList)
     }
 
@@ -385,9 +386,9 @@ object MmkvManager {
         }
     }
 
-    //endregion
+    // endregion
 
-    //region Asset
+    // region Asset
 
     /**
      * Decodes the asset URLs.
@@ -436,9 +437,9 @@ object MmkvManager {
         return JsonUtil.fromJson(json, AssetUrlItem::class.java)
     }
 
-    //endregion
+    // endregion
 
-    //region Routing
+    // region Routing
 
     /**
      * Decodes the routing rulesets.
@@ -457,13 +458,11 @@ object MmkvManager {
      * @param rulesetList The list of routing rulesets.
      */
     fun encodeRoutingRulesets(rulesetList: MutableList<RulesetItem>?) {
-        if (rulesetList.isNullOrEmpty())
-            encodeSettings(PREF_ROUTING_RULESET, "")
-        else
-            encodeSettings(PREF_ROUTING_RULESET, JsonUtil.toJson(rulesetList))
+        if (rulesetList.isNullOrEmpty()) encodeSettings(PREF_ROUTING_RULESET, "")
+        else encodeSettings(PREF_ROUTING_RULESET, JsonUtil.toJson(rulesetList))
     }
 
-    //endregion
+    // endregion
 
     /**
      * Encodes the settings.
@@ -561,9 +560,9 @@ object MmkvManager {
         return settingsStorage.decodeStringSet(key)
     }
 
-    //endregion
+    // endregion
 
-    //region Others
+    // region Others
 
     /**
      * Encodes the start on boot setting.
@@ -583,6 +582,47 @@ object MmkvManager {
         return decodeSettingsBool(PREF_IS_BOOTED, false)
     }
 
-    //endregion
+    // endregion
+
+    // region User Credentials
+
+    /**
+     * Saves user credentials (subscription ID and server URL).
+     *
+     * @param credentials The user credentials to save.
+     */
+    fun saveUserCredentials(credentials: UserCredentials) {
+        mainStorage.encode(KEY_USER_CREDENTIALS, JsonUtil.toJson(credentials))
+    }
+
+    /**
+     * Gets the saved user credentials.
+     *
+     * @return The user credentials, or null if not found.
+     */
+    fun getUserCredentials(): UserCredentials? {
+        val json = mainStorage.decodeString(KEY_USER_CREDENTIALS)
+        return if (json.isNullOrBlank()) {
+            null
+        } else {
+            JsonUtil.fromJson(json, UserCredentials::class.java)
+        }
+    }
+
+    /** Clears the saved user credentials (logout). */
+    fun clearUserCredentials() {
+        mainStorage.remove(KEY_USER_CREDENTIALS)
+    }
+
+    /**
+     * Checks if user is logged in.
+     *
+     * @return True if user credentials exist and user is logged in.
+     */
+    fun isUserLoggedIn(): Boolean {
+        return getUserCredentials()?.isLoggedIn == true
+    }
+
+    // endregion
 
 }

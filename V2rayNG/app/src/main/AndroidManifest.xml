@@ -77,6 +77,11 @@
                 android:resource="@xml/shortcuts" />
         </activity>
         <activity
+            android:name=".ui.LoginActivity"
+            android:exported="false"
+            android:noHistory="true"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:name=".ui.ServerActivity"
             android:exported="false"
             android:windowSoftInputMode="stateUnchanged" />
