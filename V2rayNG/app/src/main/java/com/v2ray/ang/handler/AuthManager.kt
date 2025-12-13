@@ -1,5 +1,7 @@
 package com.v2ray.ang.handler
 
+import android.util.Log
+import com.v2ray.ang.AppConfig
 import com.v2ray.ang.dto.UserCredentials
 
 object AuthManager {
@@ -31,7 +33,7 @@ object AuthManager {
         // Remove trailing slash from server URL if present
         val baseUrl = serverUrl.trimEnd('/')
         // Build the subscription URL: /api/subscription?token=subscriptionId
-        return "$baseUrl/api/subscription?token=$subscriptionId"
+        return "$baseUrl/$subscriptionId"
     }
 
     /**
@@ -44,10 +46,22 @@ object AuthManager {
     }
 
     /**
-     * Logs out the user by clearing stored credentials.
+     * Logs out the user by clearing stored credentials and removing associated configs.
      */
     fun logout() {
+        // Get the subscription ID before clearing credentials
+        val subId = getSubscriptionId()
+        
+        // Remove all configs associated with this subscription
+        if (!subId.isNullOrBlank()) {
+            Log.i(AppConfig.TAG, "Logout: Removing configs for subscription ID: $subId")
+            MmkvManager.removeServerViaSubid(subId)
+        }
+        
+        // Clear user credentials
         MmkvManager.clearUserCredentials()
+        
+        Log.i(AppConfig.TAG, "Logout: User logged out successfully")
     }
 
     /**

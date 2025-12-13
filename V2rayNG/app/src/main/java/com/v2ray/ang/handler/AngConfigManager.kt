@@ -221,8 +221,13 @@ object AngConfigManager {
     private fun parseBatchConfig(servers: String?, subid: String, append: Boolean): Int {
         try {
             if (servers == null) {
+                Log.d(AppConfig.TAG, "parseBatchConfig: servers is null")
                 return 0
             }
+            
+            val lines = servers.lines().filter { it.isNotBlank() }
+            Log.d(AppConfig.TAG, "parseBatchConfig: Found ${lines.size} non-empty lines to parse")
+            
             val removedSelectedServer =
                     if (!TextUtils.isEmpty(subid) && !append) {
                         MmkvManager.decodeServerConfig(MmkvManager.getSelectServer().orEmpty())
@@ -242,11 +247,16 @@ object AngConfigManager {
             val subItem = MmkvManager.decodeSubscription(subid)
             var count = 0
             servers.lines().distinct().reversed().forEach {
-                val resId = parseConfig(it, subid, subItem, removedSelectedServer)
-                if (resId == 0) {
-                    count++
+                if (it.isNotBlank()) {
+                    val resId = parseConfig(it, subid, subItem, removedSelectedServer)
+                    if (resId == 0) {
+                        count++
+                    } else {
+                        Log.d(AppConfig.TAG, "parseBatchConfig: Failed to parse line (resId=$resId): ${it.take(50)}...")
+                    }
                 }
             }
+            Log.i(AppConfig.TAG, "parseBatchConfig: Successfully parsed $count configs out of ${lines.size} lines")
             return count
         } catch (e: Exception) {
             Log.e(AppConfig.TAG, "Failed to parse batch config", e)
@@ -457,11 +467,16 @@ object AngConfigManager {
                 return 0
             }
 
+            Log.i(AppConfig.TAG, "Auto-fetch subscription: Received ${configText.length} characters of data")
+            Log.d(AppConfig.TAG, "Auto-fetch subscription: First 200 chars: ${configText.take(200)}")
+
             // Use the subscription ID as the subid for parsing
             val subId = AuthManager.getSubscriptionId() ?: "auth_sub"
 
             // Parse and import configs
-            return parseConfigViaSub(configText, subId, false)
+            val count = parseConfigViaSub(configText, subId, false)
+            Log.i(AppConfig.TAG, "Auto-fetch subscription: Parsed $count configs")
+            return count
         } catch (e: Exception) {
             Log.e(AppConfig.TAG, "Failed to auto-fetch subscription with auth", e)
             return 0
@@ -541,12 +556,18 @@ object AngConfigManager {
      * @return The number of configurations parsed.
      */
     private fun parseConfigViaSub(server: String?, subid: String, append: Boolean): Int {
+        Log.d(AppConfig.TAG, "parseConfigViaSub: Attempting to decode and parse as batch config")
         var count = parseBatchConfig(Utils.decode(server), subid, append)
         if (count <= 0) {
+            Log.d(AppConfig.TAG, "parseConfigViaSub: Decoding failed, trying raw server string")
             count = parseBatchConfig(server, subid, append)
         }
         if (count <= 0) {
+            Log.d(AppConfig.TAG, "parseConfigViaSub: Batch parsing failed, trying custom config")
             count = parseCustomConfigServer(server, subid)
+        }
+        if (count <= 0) {
+            Log.w(AppConfig.TAG, "parseConfigViaSub: All parsing methods failed, no configs imported")
         }
         return count
     }
