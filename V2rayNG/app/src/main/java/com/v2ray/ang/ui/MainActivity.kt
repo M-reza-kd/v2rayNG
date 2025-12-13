@@ -362,50 +362,8 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
     override fun onOptionsItemSelected(item: MenuItem) =
             when (item.itemId) {
-                R.id.import_qrcode -> {
-                    importQRcode()
-                    true
-                }
-                R.id.import_clipboard -> {
-                    importClipboard()
-                    true
-                }
-                R.id.import_local -> {
-                    importConfigLocal()
-                    true
-                }
-                R.id.import_manually_vmess -> {
-                    importManually(EConfigType.VMESS.value)
-                    true
-                }
-                R.id.import_manually_vless -> {
-                    importManually(EConfigType.VLESS.value)
-                    true
-                }
-                R.id.import_manually_ss -> {
-                    importManually(EConfigType.SHADOWSOCKS.value)
-                    true
-                }
-                R.id.import_manually_socks -> {
-                    importManually(EConfigType.SOCKS.value)
-                    true
-                }
-                R.id.import_manually_http -> {
-                    importManually(EConfigType.HTTP.value)
-                    true
-                }
-                R.id.import_manually_trojan -> {
-                    importManually(EConfigType.TROJAN.value)
-                    true
-                }
-                R.id.import_manually_wireguard -> {
-                    importManually(EConfigType.WIREGUARD.value)
-                    true
-                }
-                R.id.import_manually_hysteria2 -> {
-                    importManually(EConfigType.HYSTERIA2.value)
-                    true
-                }
+                // Import menu items removed - users can only add configs via channel login
+                // R.id.import_qrcode, import_clipboard, import_local, import_manually_* removed
                 R.id.export_all -> {
                     exportAll()
                     true
@@ -719,8 +677,7 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         // Handle navigation view item clicks here.
         when (item.itemId) {
-            R.id.sub_setting ->
-                    requestSubSettingActivity.launch(Intent(this, SubSettingActivity::class.java))
+            // R.id.sub_setting removed - subscription managed via channel login
             R.id.per_app_proxy_settings ->
                     startActivity(Intent(this, PerAppProxyActivity::class.java))
             R.id.routing_setting ->

@@ -53,11 +53,8 @@ class SubSettingActivity : BaseActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
-        R.id.add_config -> {
-            startActivity(Intent(this, SubEditActivity::class.java))
-            true
-        }
-
+        // R.id.add_config removed - users manage subscriptions via channel login system
+        
         R.id.sub_update -> {
             binding.pbWaiting.show()
 
