@@ -434,32 +434,43 @@ object AngConfigManager {
 
             Log.i(AppConfig.TAG, "Auto-fetch subscription from: $url")
 
-            // Fetch subscription data
-            var configText =
-                    try {
-                        val httpPort = SettingsManager.getHttpPort()
-                        HttpUtil.getUrlContentWithUserAgent(url, null, 15000, httpPort)
-                    } catch (e: Exception) {
-                        Log.e(
-                                AppConfig.TAG,
-                                "Auto-fetch subscription: proxy not ready or other error",
-                                e
-                        )
-                        ""
-                    }
+            // Use the subscription ID as the subid for parsing
+            val subId = AuthManager.getSubscriptionId() ?: "auth_sub"
+
+            // Fetch subscription data with headers
+            var configText = ""
+            var userInfoHeader: String? = null
+            try {
+                val httpPort = SettingsManager.getHttpPort()
+                val (content, userInfo) = HttpUtil.getUrlContentWithUserAgentAndHeaders(url, null, 15000, httpPort)
+                configText = content
+                userInfoHeader = userInfo
+            } catch (e: Exception) {
+                Log.e(
+                        AppConfig.TAG,
+                        "Auto-fetch subscription: proxy not ready or other error",
+                        e
+                )
+            }
 
             if (configText.isEmpty()) {
-                configText =
-                        try {
-                            HttpUtil.getUrlContentWithUserAgent(url, null)
-                        } catch (e: Exception) {
-                            Log.e(
-                                    AppConfig.TAG,
-                                    "Auto-fetch subscription: Failed to get URL content",
-                                    e
-                            )
-                            ""
-                        }
+                try {
+                    val (content, userInfo) = HttpUtil.getUrlContentWithUserAgentAndHeaders(url, null)
+                    configText = content
+                    userInfoHeader = userInfo
+                } catch (e: Exception) {
+                    Log.e(
+                            AppConfig.TAG,
+                            "Auto-fetch subscription: Failed to get URL content",
+                            e
+                    )
+                }
+            }
+
+            // Parse and save subscription user info if present
+            if (!userInfoHeader.isNullOrEmpty()) {
+                Log.i(AppConfig.TAG, "Subscription-UserInfo: $userInfoHeader")
+                parseAndSaveSubscriptionUserInfo(userInfoHeader, subId)
             }
 
             if (configText.isEmpty()) {
@@ -469,9 +480,6 @@ object AngConfigManager {
 
             Log.i(AppConfig.TAG, "Auto-fetch subscription: Received ${configText.length} characters of data")
             Log.d(AppConfig.TAG, "Auto-fetch subscription: First 200 chars: ${configText.take(200)}")
-
-            // Use the subscription ID as the subid for parsing
-            val subId = AuthManager.getSubscriptionId() ?: "auth_sub"
 
             // Parse and import configs
             val count = parseConfigViaSub(configText, subId, false)
@@ -626,5 +634,51 @@ object AngConfigManager {
         val key = MmkvManager.encodeServerConfig("", config)
         MmkvManager.encodeServerRaw(key, JsonUtil.toJsonPretty(result) ?: "")
         return key
+    }
+
+    /**
+     * Parses subscription-userinfo header and saves it to the subscription item.
+     * Header format: upload=123; download=456; total=789; expire=1234567890
+     *
+     * @param userInfoHeader The subscription-userinfo header value
+     * @param subscriptionId The subscription ID
+     */
+    private fun parseAndSaveSubscriptionUserInfo(userInfoHeader: String, subscriptionId: String) {
+        try {
+            val parts = userInfoHeader.split(";").map { it.trim() }
+            var upload: Long? = null
+            var download: Long? = null
+            var total: Long? = null
+            var expire: Long? = null
+
+            for (part in parts) {
+                val keyValue = part.split("=", limit = 2)
+                if (keyValue.size == 2) {
+                    val key = keyValue[0].trim()
+                    val value = keyValue[1].trim().toLongOrNull()
+                    when (key.lowercase()) {
+                        "upload" -> upload = value
+                        "download" -> download = value
+                        "total" -> total = value
+                        "expire" -> expire = value
+                    }
+                }
+            }
+
+            // Get existing subscription item and update it
+            val subItem = MmkvManager.decodeSubscription(subscriptionId)
+            if (subItem != null) {
+                subItem.upload = upload
+                subItem.download = download
+                subItem.total = total
+                subItem.expire = expire
+                MmkvManager.encodeSubscription(subscriptionId, subItem)
+                Log.i(AppConfig.TAG, "Saved subscription userinfo: upload=$upload, download=$download, total=$total, expire=$expire")
+            } else {
+                Log.w(AppConfig.TAG, "Subscription not found for ID: $subscriptionId")
+            }
+        } catch (e: Exception) {
+            Log.e(AppConfig.TAG, "Failed to parse subscription userinfo", e)
+        }
     }
 }

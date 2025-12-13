@@ -66,82 +66,91 @@ class ServerCustomConfigActivity : BaseActivity() {
         return true
     }
 
-    /**
-     * save server config
-     */
-    private fun saveServer(): Boolean {
-        if (TextUtils.isEmpty(binding.etRemarks.text.toString())) {
-            toast(R.string.server_lab_remarks)
-            return false
-        }
+//  COMMENTED OUT: Save server functionality disabled
+//     /**
+//      * save server config
+//      */
+//     private fun saveServer(): Boolean {
+//         if (TextUtils.isEmpty(binding.etRemarks.text.toString())) {
+//             toast(R.string.server_lab_remarks)
+//             return false
+//         }
 
-        val profileItem = try {
-            CustomFmt.parse(binding.editor.text.toString())
-        } catch (e: Exception) {
-            Log.e(AppConfig.TAG, "Failed to parse custom configuration", e)
-            toast("${getString(R.string.toast_malformed_josn)} ${e.cause?.message}")
-            return false
-        }
+//         val profileItem = try {
+//             CustomFmt.parse(binding.editor.text.toString())
+//         } catch (e: Exception) {
+//             Log.e(AppConfig.TAG, "Failed to parse custom configuration", e)
+//             toast("${getString(R.string.toast_malformed_josn)} ${e.cause?.message}")
+//             return false
+//         }
 
-        val config = MmkvManager.decodeServerConfig(editGuid) ?: ProfileItem.create(EConfigType.CUSTOM)
-        binding.etRemarks.text.let {
-            config.remarks = if (it.isNullOrEmpty()) profileItem?.remarks.orEmpty() else it.toString()
-        }
-        config.server = profileItem?.server
-        config.serverPort = profileItem?.serverPort
+//         val config = MmkvManager.decodeServerConfig(editGuid) ?: ProfileItem.create(EConfigType.CUSTOM)
+//         binding.etRemarks.text.let {
+//             config.remarks = if (it.isNullOrEmpty()) profileItem?.remarks.orEmpty() else it.toString()
+//         }
+//         config.server = profileItem?.server
+//         config.serverPort = profileItem?.serverPort
 
-        MmkvManager.encodeServerConfig(editGuid, config)
-        MmkvManager.encodeServerRaw(editGuid, binding.editor.text.toString())
-        toastSuccess(R.string.toast_success)
-        finish()
-        return true
-    }
+//         MmkvManager.encodeServerConfig(editGuid, config)
+//         MmkvManager.encodeServerRaw(editGuid, binding.editor.text.toString())
+//         toastSuccess(R.string.toast_success)
+//         finish()
+//         return true
+//     }
+//     
 
-    /**
-     * save server config
-     */
-    private fun deleteServer(): Boolean {
-        if (editGuid.isNotEmpty()) {
-            AlertDialog.Builder(this).setMessage(R.string.del_config_comfirm)
-                .setPositiveButton(android.R.string.ok) { _, _ ->
-                    MmkvManager.removeServer(editGuid)
-                    finish()
-                }
-                .setNegativeButton(android.R.string.cancel) { _, _ ->
-                    // do nothing
-                }
-                .show()
-        }
-        return true
-    }
+    // COMMENTED OUT: Delete server functionality disabled
+//    /**
+//     * save server config
+//     */
+//    private fun deleteServer(): Boolean {
+//        if (editGuid.isNotEmpty()) {
+//            AlertDialog.Builder(this).setMessage(R.string.del_config_comfirm)
+//                .setPositiveButton(android.R.string.ok) { _, _ ->
+//                    MmkvManager.removeServer(editGuid)
+//                    finish()
+//                }
+//                .setNegativeButton(android.R.string.cancel) { _, _ ->
+//                    // do nothing
+//                }
+//                .show()
+//        }
+//        return true
+//    }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.action_server, menu)
         val delButton = menu.findItem(R.id.del_config)
         val saveButton = menu.findItem(R.id.save_config)
 
-        if (editGuid.isNotEmpty()) {
-            if (isRunning) {
-                delButton?.isVisible = false
-                saveButton?.isVisible = false
-            }
-        } else {
-            delButton?.isVisible = false
-        }
+        // DISABLED: Save and delete functionality disabled for all users
+        delButton?.isVisible = false
+        saveButton?.isVisible = false
+        
+        // COMMENTED OUT: Original menu visibility logic
+//        if (editGuid.isNotEmpty()) {
+//            if (isRunning) {
+//                delButton?.isVisible = false
+//                saveButton?.isVisible = false
+//            }
+//        } else {
+//            delButton?.isVisible = false
+//        }
 
         return super.onCreateOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
-        R.id.del_config -> {
-            deleteServer()
-            true
-        }
-
-        R.id.save_config -> {
-            saveServer()
-            true
-        }
+        // COMMENTED OUT: Save and delete disabled
+//        R.id.del_config -> {
+//            deleteServer()
+//            true
+//        }
+//
+//        R.id.save_config -> {
+//            saveServer()
+//            true
+//        }
 
         else -> super.onOptionsItemSelected(item)
     }

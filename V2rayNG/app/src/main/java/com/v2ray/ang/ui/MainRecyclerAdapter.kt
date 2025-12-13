@@ -88,38 +88,46 @@ class MainRecyclerAdapter(val activity: MainActivity) : RecyclerView.Adapter<Mai
             holder.itemMainBinding.layoutSubscription.visibility = if (subRemarks.isEmpty()) View.GONE else View.VISIBLE
 
             //layout
-            if (doubleColumnDisplay) {
-                holder.itemMainBinding.layoutShare.visibility = View.GONE
-                holder.itemMainBinding.layoutEdit.visibility = View.GONE
-                holder.itemMainBinding.layoutRemove.visibility = View.GONE
-                holder.itemMainBinding.layoutMore.visibility = View.VISIBLE
-
-                //share method
-                val shareOptions = if (isCustom) share_method_more.asList().takeLast(3) else share_method_more.asList()
-
-                holder.itemMainBinding.layoutMore.setOnClickListener {
-                    shareServer(guid, profile, position, shareOptions, if (isCustom) 2 else 0)
-                }
-            } else {
-                holder.itemMainBinding.layoutShare.visibility = View.VISIBLE
-                holder.itemMainBinding.layoutEdit.visibility = View.VISIBLE
-                holder.itemMainBinding.layoutRemove.visibility = View.VISIBLE
-                holder.itemMainBinding.layoutMore.visibility = View.GONE
-
-                //share method
-                val shareOptions = if (isCustom) share_method.asList().takeLast(1) else share_method.asList()
-
-                holder.itemMainBinding.layoutShare.setOnClickListener {
-                    shareServer(guid, profile, position, shareOptions, if (isCustom) 2 else 0)
-                }
-
-                holder.itemMainBinding.layoutEdit.setOnClickListener {
-                    editServer(guid, profile)
-                }
-                holder.itemMainBinding.layoutRemove.setOnClickListener {
-                    removeServer(guid, position)
-                }
-            }
+            // DISABLED: Share, edit, and remove functionality
+            // Users cannot modify or share configs
+            holder.itemMainBinding.layoutShare.visibility = View.GONE
+            holder.itemMainBinding.layoutEdit.visibility = View.GONE
+            holder.itemMainBinding.layoutRemove.visibility = View.GONE
+            holder.itemMainBinding.layoutMore.visibility = View.GONE
+            
+            // COMMENTED OUT: Config modification and sharing
+//            if (doubleColumnDisplay) {
+//                holder.itemMainBinding.layoutShare.visibility = View.GONE
+//                holder.itemMainBinding.layoutEdit.visibility = View.GONE
+//                holder.itemMainBinding.layoutRemove.visibility = View.GONE
+//                holder.itemMainBinding.layoutMore.visibility = View.VISIBLE
+//
+//                //share method
+//                val shareOptions = if (isCustom) share_method_more.asList().takeLast(3) else share_method_more.asList()
+//
+//                holder.itemMainBinding.layoutMore.setOnClickListener {
+//                    shareServer(guid, profile, position, shareOptions, if (isCustom) 2 else 0)
+//                }
+//            } else {
+//                holder.itemMainBinding.layoutShare.visibility = View.VISIBLE
+//                holder.itemMainBinding.layoutEdit.visibility = View.VISIBLE
+//                holder.itemMainBinding.layoutRemove.visibility = View.VISIBLE
+//                holder.itemMainBinding.layoutMore.visibility = View.GONE
+//
+//                //share method
+//                val shareOptions = if (isCustom) share_method.asList().takeLast(1) else share_method.asList()
+//
+//                holder.itemMainBinding.layoutShare.setOnClickListener {
+//                    shareServer(guid, profile, position, shareOptions, if (isCustom) 2 else 0)
+//                }
+//
+//                holder.itemMainBinding.layoutEdit.setOnClickListener {
+//                    editServer(guid, profile)
+//                }
+//                holder.itemMainBinding.layoutRemove.setOnClickListener {
+//                    removeServer(guid, position)
+//                }
+//            }
 
             holder.itemMainBinding.infoContainer.setOnClickListener {
                 setSelectServer(guid)
@@ -168,123 +176,129 @@ class MainRecyclerAdapter(val activity: MainActivity) : RecyclerView.Adapter<Mai
         return subRemarks?.toString() ?: ""
     }
 
-    /**
-     * Shares server configuration
-     * Displays a dialog with sharing options and executes the selected action
-     * @param guid The server unique identifier
-     * @param profile The server configuration
-     * @param position The position in the list
-     * @param shareOptions The list of share options
-     * @param skip The number of options to skip
-     */
-    private fun shareServer(guid: String, profile: ProfileItem, position: Int, shareOptions: List<String>, skip: Int) {
-        AlertDialog.Builder(mActivity).setItems(shareOptions.toTypedArray()) { _, i ->
-            try {
-                when (i + skip) {
-                    0 -> showQRCode(guid)
-                    1 -> share2Clipboard(guid)
-                    2 -> shareFullContent(guid)
-                    3 -> editServer(guid, profile)
-                    4 -> removeServer(guid, position)
-                    else -> mActivity.toast("else")
-                }
-            } catch (e: Exception) {
-                Log.e(AppConfig.TAG, "Error when sharing server", e)
-            }
-        }.show()
-    }
+    // COMMENTED OUT: Share functionality disabled
+//    /**
+//     * Shares server configuration
+//     * Displays a dialog with sharing options and executes the selected action
+//     * @param guid The server unique identifier
+//     * @param profile The server configuration
+//     * @param position The position in the list
+//     * @param shareOptions The list of share options
+//     * @param skip The number of options to skip
+//     */
+//    private fun shareServer(guid: String, profile: ProfileItem, position: Int, shareOptions: List<String>, skip: Int) {
+//        AlertDialog.Builder(mActivity).setItems(shareOptions.toTypedArray()) { _, i ->
+//            try {
+//                when (i + skip) {
+//                    0 -> showQRCode(guid)
+//                    1 -> share2Clipboard(guid)
+//                    2 -> shareFullContent(guid)
+//                    3 -> editServer(guid, profile)
+//                    4 -> removeServer(guid, position)
+//                    else -> mActivity.toast("else")
+//                }
+//            } catch (e: Exception) {
+//                Log.e(AppConfig.TAG, "Error when sharing server", e)
+//            }
+//        }.show()
+//    }
 
-    /**
-     * Displays QR code for the server configuration
-     * @param guid The server unique identifier
-     */
-    private fun showQRCode(guid: String) {
-        val ivBinding = ItemQrcodeBinding.inflate(LayoutInflater.from(mActivity))
-        ivBinding.ivQcode.setImageBitmap(AngConfigManager.share2QRCode(guid))
-        AlertDialog.Builder(mActivity).setView(ivBinding.root).show()
-    }
+    // COMMENTED OUT: QR code sharing disabled
+//    /**
+//     * Displays QR code for the server configuration
+//     * @param guid The server unique identifier
+//     */
+//    private fun showQRCode(guid: String) {
+//        val ivBinding = ItemQrcodeBinding.inflate(LayoutInflater.from(mActivity))
+//        ivBinding.ivQcode.setImageBitmap(AngConfigManager.share2QRCode(guid))
+//        AlertDialog.Builder(mActivity).setView(ivBinding.root).show()
+//    }
 
-    /**
-     * Shares server configuration to clipboard
-     * @param guid The server unique identifier
-     */
-    private fun share2Clipboard(guid: String) {
-        if (AngConfigManager.share2Clipboard(mActivity, guid) == 0) {
-            mActivity.toastSuccess(R.string.toast_success)
-        } else {
-            mActivity.toastError(R.string.toast_failure)
-        }
-    }
+    // COMMENTED OUT: Clipboard sharing disabled
+//    /**
+//     * Shares server configuration to clipboard
+//     * @param guid The server unique identifier
+//     */
+//    private fun share2Clipboard(guid: String) {
+//        if (AngConfigManager.share2Clipboard(mActivity, guid) == 0) {
+//            mActivity.toastSuccess(R.string.toast_success)
+//        } else {
+//            mActivity.toastError(R.string.toast_failure)
+//        }
+//    }
 
-    /**
-     * Shares full server configuration content to clipboard
-     * @param guid The server unique identifier
-     */
-    private fun shareFullContent(guid: String) {
-        mActivity.lifecycleScope.launch(Dispatchers.IO) {
-            val result = AngConfigManager.shareFullContent2Clipboard(mActivity, guid)
-            launch(Dispatchers.Main) {
-                if (result == 0) {
-                    mActivity.toastSuccess(R.string.toast_success)
-                } else {
-                    mActivity.toastError(R.string.toast_failure)
-                }
-            }
-        }
-    }
+    // COMMENTED OUT: Full content sharing disabled
+//    /**
+//     * Shares full server configuration content to clipboard
+//     * @param guid The server unique identifier
+//     */
+//    private fun shareFullContent(guid: String) {
+//        mActivity.lifecycleScope.launch(Dispatchers.IO) {
+//            val result = AngConfigManager.shareFullContent2Clipboard(mActivity, guid)
+//            launch(Dispatchers.Main) {
+//                if (result == 0) {
+//                    mActivity.toastSuccess(R.string.toast_success)
+//                } else {
+//                    mActivity.toastError(R.string.toast_failure)
+//                }
+//            }
+//        }
+//    }
 
-    /**
-     * Edits server configuration
-     * Opens appropriate editing interface based on configuration type
-     * @param guid The server unique identifier
-     * @param profile The server configuration
-     */
-    private fun editServer(guid: String, profile: ProfileItem) {
-        val intent = Intent().putExtra("guid", guid)
-            .putExtra("isRunning", isRunning)
-            .putExtra("createConfigType", profile.configType.value)
-        if (profile.configType == EConfigType.CUSTOM) {
-            mActivity.startActivity(intent.setClass(mActivity, ServerCustomConfigActivity::class.java))
-        } else {
-            mActivity.startActivity(intent.setClass(mActivity, ServerActivity::class.java))
-        }
-    }
+    // COMMENTED OUT: Server editing disabled
+//    /**
+//     * Edits server configuration
+//     * Opens appropriate editing interface based on configuration type
+//     * @param guid The server unique identifier
+//     * @param profile The server configuration
+//     */
+//    private fun editServer(guid: String, profile: ProfileItem) {
+//        val intent = Intent().putExtra("guid", guid)
+//            .putExtra("isRunning", isRunning)
+//            .putExtra("createConfigType", profile.configType.value)
+//        if (profile.configType == EConfigType.CUSTOM) {
+//            mActivity.startActivity(intent.setClass(mActivity, ServerCustomConfigActivity::class.java))
+//        } else {
+//            mActivity.startActivity(intent.setClass(mActivity, ServerActivity::class.java))
+//        }
+//    }
 
-    /**
-     * Removes server configuration
-     * Handles confirmation dialog and related checks
-     * @param guid The server unique identifier
-     * @param position The position in the list
-     */
-    private fun removeServer(guid: String, position: Int) {
-        if (guid != MmkvManager.getSelectServer()) {
-            if (MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE) == true) {
-                AlertDialog.Builder(mActivity).setMessage(R.string.del_config_comfirm)
-                    .setPositiveButton(android.R.string.ok) { _, _ ->
-                        removeServerSub(guid, position)
-                    }
-                    .setNegativeButton(android.R.string.cancel) { _, _ ->
-                        //do noting
-                    }
-                    .show()
-            } else {
-                removeServerSub(guid, position)
-            }
-        } else {
-            application.toast(R.string.toast_action_not_allowed)
-        }
-    }
-
-    /**
-     * Executes the actual server removal process
-     * @param guid The server unique identifier
-     * @param position The position in the list
-     */
-    private fun removeServerSub(guid: String, position: Int) {
-        mActivity.mainViewModel.removeServer(guid)
-        notifyItemRemoved(position)
-        notifyItemRangeChanged(position, mActivity.mainViewModel.serversCache.size)
-    }
+    // COMMENTED OUT: Server removal disabled
+//    /**
+//     * Removes server configuration
+//     * Handles confirmation dialog and related checks
+//     * @param guid The server unique identifier
+//     * @param position The position in the list
+//     */
+//    private fun removeServer(guid: String, position: Int) {
+//        if (guid != MmkvManager.getSelectServer()) {
+//            if (MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE) == true) {
+//                AlertDialog.Builder(mActivity).setMessage(R.string.del_config_comfirm)
+//                    .setPositiveButton(android.R.string.ok) { _, _ ->
+//                        removeServerSub(guid, position)
+//                    }
+//                    .setNegativeButton(android.R.string.cancel) { _, _ ->
+//                        //do noting
+//                    }
+//                    .show()
+//            } else {
+//                removeServerSub(guid, position)
+//            }
+//        } else {
+//            application.toast(R.string.toast_action_not_allowed)
+//        }
+//    }
+//
+//    /**
+//     * Executes the actual server removal process
+//     * @param guid The server unique identifier
+//     * @param position The position in the list
+//     */
+//    private fun removeServerSub(guid: String, position: Int) {
+//        mActivity.mainViewModel.removeServer(guid)
+//        notifyItemRemoved(position)
+//        notifyItemRangeChanged(position, mActivity.mainViewModel.serversCache.size)
+//    }
 
     /**
      * Sets the selected server

@@ -129,6 +129,21 @@ object HttpUtil {
      */
     @Throws(IOException::class)
     fun getUrlContentWithUserAgent(url: String?, userAgent: String?,  timeout: Int = 15000, httpPort: Int = 0): String {
+        return getUrlContentWithUserAgentAndHeaders(url, userAgent, timeout, httpPort).first
+    }
+
+    /**
+     * Retrieves the content of a URL with headers including subscription-userinfo.
+     *
+     * @param url The URL to fetch content from.
+     * @param userAgent The user agent string.
+     * @param timeout The timeout value in milliseconds.
+     * @param httpPort The HTTP port to use.
+     * @return Pair of content string and subscription-userinfo header (if present).
+     * @throws IOException If an I/O error occurs.
+     */
+    @Throws(IOException::class)
+    fun getUrlContentWithUserAgentAndHeaders(url: String?, userAgent: String?, timeout: Int = 15000, httpPort: Int = 0): Pair<String, String?> {
         var currentUrl = url
         var redirects = 0
         val maxRedirects = 3
@@ -157,7 +172,9 @@ object HttpUtil {
                 }
 
                 else -> try {
-                    return conn.inputStream.use { it.bufferedReader().readText() }
+                    val content = conn.inputStream.use { it.bufferedReader().readText() }
+                    val userInfo = conn.getHeaderField("subscription-userinfo")
+                    return Pair(content, userInfo)
                 } finally {
                     conn.disconnect()
                 }

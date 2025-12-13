@@ -14,5 +14,10 @@ data class SubscriptionItem(
     var intelligentSelectionFilter: String? = null,
     var allowInsecureUrl: Boolean = false,
     var userAgent: String? = null,
+    // Subscription user info from HTTP headers
+    var upload: Long? = null,        // bytes uploaded
+    var download: Long? = null,      // bytes downloaded
+    var total: Long? = null,         // total traffic allowance in bytes
+    var expire: Long? = null,        // expiration timestamp
 )
 

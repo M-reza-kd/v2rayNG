@@ -51,7 +51,8 @@
                         android:padding="@dimen/padding_spacing_dp8"
                         app:tabIndicatorFullWidth="false"
                         app:tabMode="scrollable"
-                        app:tabTextAppearance="@style/TabLayoutTextStyle" />
+                        app:tabTextAppearance="@style/TabLayoutTextStyle"
+                        android:visibility="gone" />
 
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/recycler_view"
@@ -62,30 +63,53 @@
                         android:scrollbars="vertical" />
 
                     <LinearLayout
-                        android:id="@+id/layout_test"
+                        android:id="@+id/layout_subscription_info"
                         android:layout_width="match_parent"
-                        android:layout_height="@dimen/view_height_dp64"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:nextFocusLeft="@+id/recycler_view"
-                        android:nextFocusRight="@+id/fab"
-                        android:orientation="vertical">
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/padding_spacing_dp16"
+                        android:background="?attr/selectableItemBackground">
 
                         <View
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="1dp"
                             android:background="@color/divider_color_light" />
 
-                        <TextView
-                            android:id="@+id/tv_test_state"
-                            android:layout_width="wrap_content"
-                            android:layout_height="match_parent"
-                            android:gravity="start|center"
-                            android:maxLines="2"
-                            android:minLines="1"
-                            android:paddingStart="@dimen/padding_spacing_dp16"
-                            android:text="@string/connection_test_pending"
-                            android:textAppearance="@style/TextAppearance.AppCompat.Small" />
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="@dimen/padding_spacing_dp8"
+                            android:layout_marginBottom="@dimen/padding_spacing_dp4">
+
+                            <TextView
+                                android:id="@+id/tv_subscription_traffic"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Traffic: Loading..."
+                                android:textAppearance="@style/TextAppearance.AppCompat.Small"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/tv_subscription_expire"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Expires: Loading..."
+                                android:textAppearance="@style/TextAppearance.AppCompat.Small"
+                                android:textSize="12sp" />
+
+                        </LinearLayout>
+
+                        <ProgressBar
+                            android:id="@+id/pb_subscription_usage"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="8dp"
+                            android:max="100"
+                            android:progress="0"
+                            android:progressTint="@color/colorAccent"
+                            android:progressBackgroundTint="@color/divider_color_light" />
 
                     </LinearLayout>
                 </LinearLayout>

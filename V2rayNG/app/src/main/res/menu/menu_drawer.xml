@@ -5,6 +5,7 @@
 
     <group android:id="@+id/group_main">
         <!-- Subscription settings removed - managed via channel login system -->
+        <!-- COMMENTED OUT: Unnecessary navigation items hidden
         <item
             android:id="@+id/per_app_proxy_settings"
             android:icon="@drawable/ic_per_apps_24dp"
@@ -17,6 +18,7 @@
             android:id="@+id/user_asset_setting"
             android:icon="@drawable/ic_file_24dp"
             android:title="@string/title_user_asset_setting" />
+        -->
         <item
             android:id="@+id/settings"
             android:icon="@drawable/ic_settings_24dp"
@@ -27,6 +29,7 @@
             android:title="@string/menu_logout" />
     </group>
 
+    <!-- COMMENTED OUT: Group 2 items hidden
     <group android:id="@+id/group_id2">
         <item
             android:id="@+id/promotion"
@@ -44,10 +47,10 @@
             android:id="@+id/about"
             android:icon="@drawable/ic_about_24dp"
             android:title="@string/title_about" />
-        <!-- place holder for version text at the bottom -->
         <item
             android:id="@+id/placeholder"
             android:enabled="false"
             android:title="" />
     </group>
+    -->
 </menu>

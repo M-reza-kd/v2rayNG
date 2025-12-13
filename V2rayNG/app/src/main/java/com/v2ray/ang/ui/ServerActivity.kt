@@ -441,66 +441,67 @@ class ServerActivity : BaseActivity() {
         return true
     }
 
-    /**
-     * save server config
-     */
-    private fun saveServer(): Boolean {
-        if (TextUtils.isEmpty(et_remarks.text.toString())) {
-            toast(R.string.server_lab_remarks)
-            return false
-        }
-        if (TextUtils.isEmpty(et_address.text.toString())) {
-            toast(R.string.server_lab_address)
-            return false
-        }
-        if (createConfigType != EConfigType.HYSTERIA2) {
-            if (Utils.parseInt(et_port.text.toString()) <= 0) {
-                toast(R.string.server_lab_port)
-                return false
-            }
-        }
-        val config =
-            MmkvManager.decodeServerConfig(editGuid) ?: ProfileItem.create(createConfigType)
-        if (config.configType != EConfigType.SOCKS
-            && config.configType != EConfigType.HTTP
-            && TextUtils.isEmpty(et_id.text.toString())
-        ) {
-            if (config.configType == EConfigType.TROJAN
-                || config.configType == EConfigType.SHADOWSOCKS
-                || config.configType == EConfigType.HYSTERIA2
-            ) {
-                toast(R.string.server_lab_id3)
-            } else {
-                toast(R.string.server_lab_id)
-            }
-            return false
-        }
-        sp_stream_security?.let {
-            if (config.configType == EConfigType.TROJAN && TextUtils.isEmpty(streamSecuritys[it.selectedItemPosition])) {
-                toast(R.string.server_lab_stream_security)
-                return false
-            }
-        }
-        if (et_extra?.text?.toString().isNotNullEmpty()) {
-            if (JsonUtil.parseString(et_extra?.text?.toString()) == null) {
-                toast(R.string.server_lab_xhttp_extra)
-                return false
-            }
-        }
-
-        saveCommon(config)
-        saveStreamSettings(config)
-        saveTls(config)
-
-        if (config.subscriptionId.isEmpty() && !subscriptionId.isNullOrEmpty()) {
-            config.subscriptionId = subscriptionId.orEmpty()
-        }
-        //Log.i(AppConfig.TAG, JsonUtil.toJsonPretty(config) ?: "")
-        MmkvManager.encodeServerConfig(editGuid, config)
-        toastSuccess(R.string.toast_success)
-        finish()
-        return true
-    }
+    // COMMENTED OUT: Save server functionality disabled
+//    /**
+//     * save server config
+//     */
+//    private fun saveServer(): Boolean {
+//        if (TextUtils.isEmpty(et_remarks.text.toString())) {
+//            toast(R.string.server_lab_remarks)
+//            return false
+//        }
+//        if (TextUtils.isEmpty(et_address.text.toString())) {
+//            toast(R.string.server_lab_address)
+//            return false
+//        }
+//        if (createConfigType != EConfigType.HYSTERIA2) {
+//            if (Utils.parseInt(et_port.text.toString()) <= 0) {
+//                toast(R.string.server_lab_port)
+//                return false
+//            }
+//        }
+//        val config =
+//            MmkvManager.decodeServerConfig(editGuid) ?: ProfileItem.create(createConfigType)
+//        if (config.configType != EConfigType.SOCKS
+//            && config.configType != EConfigType.HTTP
+//            && TextUtils.isEmpty(et_id.text.toString())
+//        ) {
+//            if (config.configType == EConfigType.TROJAN
+//                || config.configType == EConfigType.SHADOWSOCKS
+//                || config.configType == EConfigType.HYSTERIA2
+//            ) {
+//                toast(R.string.server_lab_id3)
+//            } else {
+//                toast(R.string.server_lab_id)
+//            }
+//            return false
+//        }
+//        sp_stream_security?.let {
+//            if (config.configType == EConfigType.TROJAN && TextUtils.isEmpty(streamSecuritys[it.selectedItemPosition])) {
+//                toast(R.string.server_lab_stream_security)
+//                return false
+//            }
+//        }
+//        if (et_extra?.text?.toString().isNotNullEmpty()) {
+//            if (JsonUtil.parseString(et_extra?.text?.toString()) == null) {
+//                toast(R.string.server_lab_xhttp_extra)
+//                return false
+//            }
+//        }
+//
+//        saveCommon(config)
+//        saveStreamSettings(config)
+//        saveTls(config)
+//
+//        if (config.subscriptionId.isEmpty() && !subscriptionId.isNullOrEmpty()) {
+//            config.subscriptionId = subscriptionId.orEmpty()
+//        }
+//        //Log.i(AppConfig.TAG, JsonUtil.toJsonPretty(config) ?: "")
+//        MmkvManager.encodeServerConfig(editGuid, config)
+//        toastSuccess(R.string.toast_success)
+//        finish()
+//        return true
+//    }
 
     private fun saveCommon(config: ProfileItem) {
         config.remarks = et_remarks.text.toString().trim()
@@ -611,60 +612,67 @@ class ServerActivity : BaseActivity() {
         }
     }
 
-    /**
-     * delete server config
-     */
-    private fun deleteServer(): Boolean {
-        if (editGuid.isNotEmpty()) {
-            if (editGuid != MmkvManager.getSelectServer()) {
-                if (MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE) == true) {
-                    AlertDialog.Builder(this).setMessage(R.string.del_config_comfirm)
-                        .setPositiveButton(android.R.string.ok) { _, _ ->
-                            MmkvManager.removeServer(editGuid)
-                            finish()
-                        }
-                        .setNegativeButton(android.R.string.cancel) { _, _ ->
-                            // do nothing
-                        }
-                        .show()
-                } else {
-                    MmkvManager.removeServer(editGuid)
-                    finish()
-                }
-            } else {
-                application.toast(R.string.toast_action_not_allowed)
-            }
-        }
-        return true
-    }
+    // COMMENTED OUT: Delete server functionality disabled
+//    /**
+//     * delete server config
+//     */
+//    private fun deleteServer(): Boolean {
+//        if (editGuid.isNotEmpty()) {
+//            if (editGuid != MmkvManager.getSelectServer()) {
+//                if (MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE) == true) {
+//                    AlertDialog.Builder(this).setMessage(R.string.del_config_comfirm)
+//                        .setPositiveButton(android.R.string.ok) { _, _ ->
+//                            MmkvManager.removeServer(editGuid)
+//                            finish()
+//                        }
+//                        .setNegativeButton(android.R.string.cancel) { _, _ ->
+//                            // do nothing
+//                        }
+//                        .show()
+//                } else {
+//                    MmkvManager.removeServer(editGuid)
+//                    finish()
+//                }
+//            } else {
+//                application.toast(R.string.toast_action_not_allowed)
+//            }
+//        }
+//        return true
+//    }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.action_server, menu)
         val delButton = menu.findItem(R.id.del_config)
         val saveButton = menu.findItem(R.id.save_config)
 
-        if (editGuid.isNotEmpty()) {
-            if (isRunning) {
-                delButton?.isVisible = false
-                saveButton?.isVisible = false
-            }
-        } else {
-            delButton?.isVisible = false
-        }
+        // DISABLED: Save and delete functionality disabled for all users
+        delButton?.isVisible = false
+        saveButton?.isVisible = false
+        
+        // COMMENTED OUT: Original menu visibility logic
+//        if (editGuid.isNotEmpty()) {
+//            if (isRunning) {
+//                delButton?.isVisible = false
+//                saveButton?.isVisible = false
+//            }
+//        } else {
+//            delButton?.isVisible = false
+//        }
 
         return super.onCreateOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
-        R.id.del_config -> {
-            deleteServer()
-            true
-        }
-
-        R.id.save_config -> {
-            saveServer()
-            true
-        }
+        // COMMENTED OUT: Save and delete disabled
+//        R.id.del_config -> {
+//            deleteServer()
+//            true
+//        }
+//
+//        R.id.save_config -> {
+//            saveServer()
+//            true
+//        }
 
         else -> super.onOptionsItemSelected(item)
     }
