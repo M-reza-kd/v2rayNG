@@ -222,7 +222,8 @@ object PluginManager {
         return File(pluginDir, pluginId).absolutePath
     }
 
-    fun ComponentInfo.loadString(key: String) = when (val value = metaData.getString(key)) {
+    @Suppress("DEPRECATION")
+    fun ComponentInfo.loadString(key: String) = when (val value = metaData.get(key)) {
         is String -> value
 //        is Int -> AngApplication.application.packageManager.getResourcesForApplication(applicationInfo)
 //            .getString(value)

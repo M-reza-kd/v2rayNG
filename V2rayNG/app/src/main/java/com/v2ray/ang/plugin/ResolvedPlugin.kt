@@ -26,6 +26,7 @@ import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.graphics.drawable.Drawable
 import android.os.Build
+import androidx.core.content.pm.PackageInfoCompat
 import com.v2ray.ang.AngApplication
 import com.v2ray.ang.plugin.PluginManager.loadString
 
@@ -34,7 +35,7 @@ abstract class ResolvedPlugin(protected val resolveInfo: ResolveInfo) : Plugin()
 
     override val id by lazy { componentInfo.loadString(PluginContract.METADATA_KEY_ID)!! }
     override val version by lazy {
-        getPackageInfo(componentInfo.packageName).versionCode
+        PackageInfoCompat.getLongVersionCode(getPackageInfo(componentInfo.packageName)).toInt()
     }
     override val versionName: String by lazy {
         getPackageInfo(componentInfo.packageName).versionName!!

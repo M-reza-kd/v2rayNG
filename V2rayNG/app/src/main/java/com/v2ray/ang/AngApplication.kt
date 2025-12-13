@@ -3,15 +3,20 @@ package com.v2ray.ang
 import android.content.Context
 import androidx.multidex.MultiDexApplication
 import androidx.work.Configuration
-import androidx.work.WorkManager
 import com.tencent.mmkv.MMKV
 import com.v2ray.ang.AppConfig.ANG_PACKAGE
 import com.v2ray.ang.handler.SettingsManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
-class AngApplication : MultiDexApplication() {
+class AngApplication : MultiDexApplication(), Configuration.Provider {
     companion object {
         lateinit var application: AngApplication
     }
+
+    private val applicationScope = CoroutineScope(SupervisorJob())
 
     /**
      * Attaches the base context to the application.
@@ -22,9 +27,10 @@ class AngApplication : MultiDexApplication() {
         application = this
     }
 
-    private val workManagerConfiguration: Configuration = Configuration.Builder()
-        .setDefaultProcessName("${ANG_PACKAGE}:bg")
-        .build()
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setDefaultProcessName("${ANG_PACKAGE}:bg")
+            .build()
 
     /**
      * Initializes the application.
@@ -35,10 +41,11 @@ class AngApplication : MultiDexApplication() {
         MMKV.initialize(this)
 
         SettingsManager.setNightMode()
-        // Initialize WorkManager with the custom configuration
-        WorkManager.initialize(this, workManagerConfiguration)
 
-        SettingsManager.initRoutingRulesets(this)
+        applicationScope.launch(Dispatchers.IO) {
+            SettingsManager.initRoutingRulesets(this@AngApplication)
+            SettingsManager.initAssets(this@AngApplication, assets)
+        }
 
         es.dmoral.toasty.Toasty.Config.getInstance()
             .setGravity(android.view.Gravity.BOTTOM, 0, 200)

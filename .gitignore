@@ -21,9 +21,8 @@ V2rayNG/app/build
 V2rayNG/build
 V2rayNG/local.properties
 
-# Ignore APK and AAR files
+# Ignore APK files
 *.apk
-*.aar
 
 # Ignore signing properties
 signing.properties
