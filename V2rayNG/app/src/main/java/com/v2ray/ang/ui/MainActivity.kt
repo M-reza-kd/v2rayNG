@@ -164,7 +164,19 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
             } else {
                 lifecycleScope.launch {
                     try {
-                        // Auto-select best server before connecting
+                        // Test servers and select best server using real ping
+                        binding.tvConnectionStatus.text = "Testing servers..."
+                        binding.tvConnectionStatus.setTextColor(
+                            ContextCompat.getColor(this@MainActivity, android.R.color.darker_gray)
+                        )
+                        
+                        Log.i(AppConfig.TAG, "Starting real ping test for all servers")
+                        mainViewModel.testAllRealPing()
+                        
+                        // Wait for real ping results (takes longer as it creates V2Ray instances)
+                        delay(8000)
+                        
+                        // Select best server based on real ping results
                         binding.tvConnectionStatus.text = "Selecting best server..."
                         binding.tvConnectionStatus.setTextColor(
                             ContextCompat.getColor(this@MainActivity, android.R.color.darker_gray)
@@ -306,19 +318,6 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
                     ContextCompat.getColor(this, R.color.color_fab_active)
                 )
                 toast("VPN Connected")
-                
-                // After VPN connects, update ping with real ping for accurate measurement
-                lifecycleScope.launch {
-                    delay(3000)  // Wait for VPN to stabilize
-                    try {
-                        Log.i(AppConfig.TAG, "VPN connected - updating ping with real ping")
-                        mainViewModel.testAllRealPing()
-                        delay(5000)  // Wait for real ping results
-                        updatePingDisplay()
-                    } catch (e: Exception) {
-                        Log.e(AppConfig.TAG, "Failed to update real ping after connection", e)
-                    }
-                }
             } else {
                 binding.fab.setImageResource(R.drawable.ic_play_24dp)
                 binding.fab.backgroundTintList =
@@ -430,58 +429,9 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
         mainViewModel.reloadServerList()
         updateSubscriptionInfo()
         
-        // Test all servers to get ping results, then select best
-        lifecycleScope.launch {
-            // Delay ping testing to avoid interfering with subscription fetch and other startup operations
-            delay(2000)
-            
-            try {
-                // Test all servers if we don't have results
-                if (shouldTestServers()) {
-                    binding.tvConnectionStatus.text = "Testing servers..."
-                    binding.tvConnectionStatus.setTextColor(
-                        ContextCompat.getColor(this@MainActivity, android.R.color.darker_gray)
-                    )
-                    
-                    // Use real ping if VPN is already running, otherwise use TCP ping for initial selection
-                    // Real ping requires VPN to be active for accurate measurement through the proxy
-                    val isVpnRunning = mainViewModel.isRunning.value == true
-                    
-                    if (isVpnRunning) {
-                        Log.i(AppConfig.TAG, "VPN is running - using real ping for accurate delay measurement")
-                        mainViewModel.testAllRealPing()
-                        // Wait for results (real ping takes longer as it measures through active VPN)
-                        delay(8000)
-                    } else {
-                        Log.i(AppConfig.TAG, "VPN not running - using TCP ping for initial server selection")
-                        // Use TCP ping for initial selection (doesn't require VPN, faster, and was working before)
-                        mainViewModel.testAllTcping()
-                        delay(3000)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(AppConfig.TAG, "Failed to test servers", e)
-                // If real ping fails, fall back to TCP ping
-                try {
-                    Log.i(AppConfig.TAG, "Falling back to TCP ping")
-                    mainViewModel.testAllTcping()
-                    delay(3000)
-                } catch (e2: Exception) {
-                    Log.e(AppConfig.TAG, "TCP ping also failed", e2)
-                }
-            }
-            
-            // Select best server after testing
-            selectBestServer()
-            updatePingDisplay()
-            
-            if (binding.tvConnectionStatus.text == "Testing servers...") {
-                binding.tvConnectionStatus.text = "Not Connected"
-                binding.tvConnectionStatus.setTextColor(
-                    ContextCompat.getColor(this@MainActivity, android.R.color.darker_gray)
-                )
-            }
-        }
+        // Update ping display if we have existing results, but don't test servers automatically
+        // Server testing and selection will happen when user presses the connection button
+        updatePingDisplay()
     }
 
     public override fun onPause() {
