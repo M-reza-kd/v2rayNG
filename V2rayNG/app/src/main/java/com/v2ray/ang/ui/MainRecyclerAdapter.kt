@@ -90,11 +90,11 @@ class MainRecyclerAdapter(val activity: MainActivity) : RecyclerView.Adapter<Mai
             //layout
             // DISABLED: Share, edit, and remove functionality
             // Users cannot modify or share configs
-            holder.itemMainBinding.layoutShare.visibility = View.GONE
-            holder.itemMainBinding.layoutEdit.visibility = View.GONE
-            holder.itemMainBinding.layoutRemove.visibility = View.GONE
-            holder.itemMainBinding.layoutMore.visibility = View.GONE
-            
+                holder.itemMainBinding.layoutShare.visibility = View.GONE
+                holder.itemMainBinding.layoutEdit.visibility = View.GONE
+                holder.itemMainBinding.layoutRemove.visibility = View.GONE
+                holder.itemMainBinding.layoutMore.visibility = View.GONE
+
             // COMMENTED OUT: Config modification and sharing
 //            if (doubleColumnDisplay) {
 //                holder.itemMainBinding.layoutShare.visibility = View.GONE

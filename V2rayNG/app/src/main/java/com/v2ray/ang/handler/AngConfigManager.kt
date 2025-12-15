@@ -440,30 +440,30 @@ object AngConfigManager {
             // Fetch subscription data with headers
             var configText = ""
             var userInfoHeader: String? = null
-            try {
-                val httpPort = SettingsManager.getHttpPort()
+                    try {
+                        val httpPort = SettingsManager.getHttpPort()
                 val (content, userInfo) = HttpUtil.getUrlContentWithUserAgentAndHeaders(url, null, 15000, httpPort)
                 configText = content
                 userInfoHeader = userInfo
-            } catch (e: Exception) {
-                Log.e(
-                        AppConfig.TAG,
-                        "Auto-fetch subscription: proxy not ready or other error",
-                        e
-                )
-            }
+                    } catch (e: Exception) {
+                        Log.e(
+                                AppConfig.TAG,
+                                "Auto-fetch subscription: proxy not ready or other error",
+                                e
+                        )
+                    }
 
             if (configText.isEmpty()) {
-                try {
+                        try {
                     val (content, userInfo) = HttpUtil.getUrlContentWithUserAgentAndHeaders(url, null)
                     configText = content
                     userInfoHeader = userInfo
-                } catch (e: Exception) {
-                    Log.e(
-                            AppConfig.TAG,
-                            "Auto-fetch subscription: Failed to get URL content",
-                            e
-                    )
+                        } catch (e: Exception) {
+                            Log.e(
+                                    AppConfig.TAG,
+                                    "Auto-fetch subscription: Failed to get URL content",
+                                    e
+                            )
                 }
             }
 

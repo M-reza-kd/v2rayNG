@@ -147,9 +147,49 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
         binding.fab.setOnClickListener {
             if (mainViewModel.isRunning.value == true) {
+                // Stop VPN if running
+                binding.tvConnectionStatus.text = "Disconnecting..."
+                binding.tvConnectionStatus.setTextColor(
+                    ContextCompat.getColor(this, android.R.color.darker_gray)
+                )
+                try {
                 V2RayServiceManager.stopVService(this)
-            } else if ((MmkvManager.decodeSettingsString(AppConfig.PREF_MODE) ?: VPN) == VPN) {
-                val intent = VpnService.prepare(this)
+                } catch (e: Exception) {
+                    Log.e(AppConfig.TAG, "Failed to stop VPN", e)
+                    binding.tvConnectionStatus.text = "Error stopping: ${e.message}"
+                    binding.tvConnectionStatus.setTextColor(
+                        ContextCompat.getColor(this, android.R.color.holo_red_dark)
+                    )
+                }
+            } else {
+                lifecycleScope.launch {
+                    try {
+                        // Auto-select best server before connecting
+                        binding.tvConnectionStatus.text = "Selecting best server..."
+                        binding.tvConnectionStatus.setTextColor(
+                            ContextCompat.getColor(this@MainActivity, android.R.color.darker_gray)
+                        )
+                        selectBestServer()
+                        updatePingDisplay()
+                        
+                        // Check if a server is selected
+                        if (MmkvManager.getSelectServer().isNullOrEmpty()) {
+                            binding.tvConnectionStatus.text = "Error: No server available"
+                            binding.tvConnectionStatus.setTextColor(
+                                ContextCompat.getColor(this@MainActivity, android.R.color.holo_red_dark)
+                            )
+                            toast("No server configured")
+                            return@launch
+                        }
+                        
+                        // Start VPN with selected server
+                        binding.tvConnectionStatus.text = "Connecting..."
+                        binding.tvConnectionStatus.setTextColor(
+                            ContextCompat.getColor(this@MainActivity, android.R.color.holo_orange_dark)
+                        )
+                        
+                        if ((MmkvManager.decodeSettingsString(AppConfig.PREF_MODE) ?: VPN) == VPN) {
+                            val intent = VpnService.prepare(this@MainActivity)
                 if (intent == null) {
                     startV2Ray()
                 } else {
@@ -158,22 +198,43 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
             } else {
                 startV2Ray()
             }
+                        
+                        // Add timeout check
+                        delay(5000) // Wait 5 seconds
+                        if (mainViewModel.isRunning.value != true && 
+                            binding.tvConnectionStatus.text == "Connecting...") {
+                            binding.tvConnectionStatus.text = "Connection timeout - try again"
+                            binding.tvConnectionStatus.setTextColor(
+                                ContextCompat.getColor(this@MainActivity, android.R.color.holo_red_dark)
+                            )
+                        }
+                    } catch (e: Exception) {
+                        Log.e(AppConfig.TAG, "Failed to start VPN", e)
+                        binding.tvConnectionStatus.text = "Error: ${e.message}"
+                        binding.tvConnectionStatus.setTextColor(
+                            ContextCompat.getColor(this@MainActivity, android.R.color.holo_red_dark)
+                        )
+                    }
+                }
+            }
         }
 
-        // Update subscription info display
+        // Update subscription info and ping display
         updateSubscriptionInfo()
+        updatePingDisplay()
 
-        binding.recyclerView.setHasFixedSize(true)
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_DOUBLE_COLUMN_DISPLAY, false)) {
-            binding.recyclerView.layoutManager = GridLayoutManager(this, 2)
-        } else {
-            binding.recyclerView.layoutManager = GridLayoutManager(this, 1)
-        }
-        addCustomDividerToRecyclerView(binding.recyclerView, this, R.drawable.custom_divider)
-        binding.recyclerView.adapter = adapter
-
-        mItemTouchHelper = ItemTouchHelper(SimpleItemTouchHelperCallback(adapter))
-        mItemTouchHelper?.attachToRecyclerView(binding.recyclerView)
+        // COMMENTED OUT: RecyclerView hidden - auto-select best server mode
+//        binding.recyclerView.setHasFixedSize(true)
+//        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_DOUBLE_COLUMN_DISPLAY, false)) {
+//            binding.recyclerView.layoutManager = GridLayoutManager(this, 2)
+//        } else {
+//            binding.recyclerView.layoutManager = GridLayoutManager(this, 1)
+//        }
+//        addCustomDividerToRecyclerView(binding.recyclerView, this, R.drawable.custom_divider)
+//        binding.recyclerView.adapter = adapter
+//
+//        mItemTouchHelper = ItemTouchHelper(SimpleItemTouchHelperCallback(adapter))
+//        mItemTouchHelper?.attachToRecyclerView(binding.recyclerView)
 
         val toggle =
                 ActionBarDrawerToggle(
@@ -232,6 +293,7 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
         // COMMENTED OUT: Test state observer - no longer used
         // mainViewModel.updateTestResultAction.observe(this) { setTestState(it) }
         mainViewModel.isRunning.observe(this) { isRunning ->
+            Log.i(AppConfig.TAG, "VPN isRunning state changed: $isRunning")
             adapter.isRunning = isRunning
             if (isRunning) {
                 binding.fab.setImageResource(R.drawable.ic_stop_24dp)
@@ -239,14 +301,43 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
                         ColorStateList.valueOf(
                                 ContextCompat.getColor(this, R.color.color_fab_active)
                         )
-                // Subscription info is always visible (if data exists)
+                binding.tvConnectionStatus.text = "Connected"
+                binding.tvConnectionStatus.setTextColor(
+                    ContextCompat.getColor(this, R.color.color_fab_active)
+                )
+                toast("VPN Connected")
+                
+                // After VPN connects, update ping with real ping for accurate measurement
+                lifecycleScope.launch {
+                    delay(3000)  // Wait for VPN to stabilize
+                    try {
+                        Log.i(AppConfig.TAG, "VPN connected - updating ping with real ping")
+                        mainViewModel.testAllRealPing()
+                        delay(5000)  // Wait for real ping results
+                        updatePingDisplay()
+                    } catch (e: Exception) {
+                        Log.e(AppConfig.TAG, "Failed to update real ping after connection", e)
+                    }
+                }
             } else {
                 binding.fab.setImageResource(R.drawable.ic_play_24dp)
                 binding.fab.backgroundTintList =
                         ColorStateList.valueOf(
                                 ContextCompat.getColor(this, R.color.color_fab_inactive)
                         )
+                // Only update to "Not Connected" if it was previously connected
+                // Don't overwrite error messages
+                if (binding.tvConnectionStatus.text == "Connecting..." || 
+                    binding.tvConnectionStatus.text == "Disconnecting..." ||
+                    binding.tvConnectionStatus.text == "Connected") {
+                    binding.tvConnectionStatus.text = "Not Connected"
+                    binding.tvConnectionStatus.setTextColor(
+                        ContextCompat.getColor(this, android.R.color.darker_gray)
+                    )
+                }
             }
+            // Update ping display
+            updatePingDisplay()
         }
         mainViewModel.startListenBroadcast()
         mainViewModel.initAssets(assets)
@@ -306,10 +397,22 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
     private fun startV2Ray() {
         if (MmkvManager.getSelectServer().isNullOrEmpty()) {
+            binding.tvConnectionStatus.text = "Error: No server selected"
+            binding.tvConnectionStatus.setTextColor(
+                ContextCompat.getColor(this, android.R.color.holo_red_dark)
+            )
             toast(R.string.title_file_chooser)
             return
         }
+        try {
         V2RayServiceManager.startVService(this)
+        } catch (e: Exception) {
+            binding.tvConnectionStatus.text = "Error: ${e.message}"
+            binding.tvConnectionStatus.setTextColor(
+                ContextCompat.getColor(this, android.R.color.holo_red_dark)
+            )
+            Log.e(AppConfig.TAG, "Failed to start V2Ray", e)
+        }
     }
 
     private fun restartV2Ray() {
@@ -326,10 +429,94 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
         super.onResume()
         mainViewModel.reloadServerList()
         updateSubscriptionInfo()
+        
+        // Test all servers to get ping results, then select best
+        lifecycleScope.launch {
+            // Delay ping testing to avoid interfering with subscription fetch and other startup operations
+            delay(2000)
+            
+            try {
+                // Test all servers if we don't have results
+                if (shouldTestServers()) {
+                    binding.tvConnectionStatus.text = "Testing servers..."
+                    binding.tvConnectionStatus.setTextColor(
+                        ContextCompat.getColor(this@MainActivity, android.R.color.darker_gray)
+                    )
+                    
+                    // Use real ping if VPN is already running, otherwise use TCP ping for initial selection
+                    // Real ping requires VPN to be active for accurate measurement through the proxy
+                    val isVpnRunning = mainViewModel.isRunning.value == true
+                    
+                    if (isVpnRunning) {
+                        Log.i(AppConfig.TAG, "VPN is running - using real ping for accurate delay measurement")
+                        mainViewModel.testAllRealPing()
+                        // Wait for results (real ping takes longer as it measures through active VPN)
+                        delay(8000)
+                    } else {
+                        Log.i(AppConfig.TAG, "VPN not running - using TCP ping for initial server selection")
+                        // Use TCP ping for initial selection (doesn't require VPN, faster, and was working before)
+                        mainViewModel.testAllTcping()
+                        delay(3000)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(AppConfig.TAG, "Failed to test servers", e)
+                // If real ping fails, fall back to TCP ping
+                try {
+                    Log.i(AppConfig.TAG, "Falling back to TCP ping")
+                    mainViewModel.testAllTcping()
+                    delay(3000)
+                } catch (e2: Exception) {
+                    Log.e(AppConfig.TAG, "TCP ping also failed", e2)
+                }
+            }
+            
+            // Select best server after testing
+            selectBestServer()
+            updatePingDisplay()
+            
+            if (binding.tvConnectionStatus.text == "Testing servers...") {
+                binding.tvConnectionStatus.text = "Not Connected"
+                binding.tvConnectionStatus.setTextColor(
+                    ContextCompat.getColor(this@MainActivity, android.R.color.darker_gray)
+                )
+            }
+        }
     }
 
     public override fun onPause() {
         super.onPause()
+    }
+
+    /**
+     * Updates the ping display for the currently selected server
+     */
+    private fun updatePingDisplay() {
+        try {
+            val selectedServer = MmkvManager.getSelectServer()
+            if (selectedServer.isNullOrEmpty()) {
+                binding.tvServerPing.text = "Ping: --"
+                return
+            }
+
+            val aff = MmkvManager.decodeServerAffiliationInfo(selectedServer)
+            val ping = aff?.testDelayMillis ?: -1L
+
+            if (ping > 0) {
+                binding.tvServerPing.text = "Ping: ${ping}ms"
+                binding.tvServerPing.setTextColor(
+                    ContextCompat.getColor(this, R.color.colorPing)
+                )
+            } else {
+                binding.tvServerPing.text = "Ping: Not tested"
+                binding.tvServerPing.setTextColor(
+                    ContextCompat.getColor(this, android.R.color.darker_gray)
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(AppConfig.TAG, "Failed to update ping display", e)
+            binding.tvServerPing.text = "Ping: --"
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -733,6 +920,64 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
 
         binding.drawerLayout.closeDrawer(GravityCompat.START)
         return true
+    }
+
+    /**
+     * Checks if servers need to be tested
+     */
+    private fun shouldTestServers(): Boolean {
+        if (mainViewModel.serversCache.isEmpty()) return false
+        
+        // Check if any server has valid ping results
+        for (server in mainViewModel.serversCache) {
+            val aff = MmkvManager.decodeServerAffiliationInfo(server.guid)
+            if ((aff?.testDelayMillis ?: -1L) > 0) {
+                return false // At least one server has valid ping
+            }
+        }
+        return true // No servers have valid ping, need to test
+    }
+
+    /**
+     * Automatically selects the server with the best (lowest) ping
+     */
+    private fun selectBestServer() {
+        try {
+            if (mainViewModel.serversCache.isEmpty()) {
+                Log.w(AppConfig.TAG, "No servers available to select")
+                return
+            }
+
+            // Find server with lowest ping (excluding negative/failed pings)
+            var bestServer: String? = null
+            var bestPing: Long = Long.MAX_VALUE
+
+            for (server in mainViewModel.serversCache) {
+                val guid = server.guid
+                val aff = MmkvManager.decodeServerAffiliationInfo(guid)
+                val ping = aff?.testDelayMillis ?: -1L
+
+                // Only consider servers with valid ping results
+                if (ping > 0 && ping < bestPing) {
+                    bestPing = ping
+                    bestServer = guid
+                }
+            }
+
+            // If no server has valid ping, select the first one
+            if (bestServer == null && mainViewModel.serversCache.isNotEmpty()) {
+                bestServer = mainViewModel.serversCache[0].guid
+                Log.i(AppConfig.TAG, "No servers with valid ping, selecting first server")
+            }
+
+            // Select the best server
+            if (bestServer != null && bestServer != MmkvManager.getSelectServer()) {
+                MmkvManager.setSelectServer(bestServer)
+                Log.i(AppConfig.TAG, "Auto-selected best server with ping: ${bestPing}ms")
+            }
+        } catch (e: Exception) {
+            Log.e(AppConfig.TAG, "Failed to select best server", e)
+        }
     }
 
     /**

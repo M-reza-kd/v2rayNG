@@ -646,8 +646,8 @@ class ServerActivity : BaseActivity() {
         val saveButton = menu.findItem(R.id.save_config)
 
         // DISABLED: Save and delete functionality disabled for all users
-        delButton?.isVisible = false
-        saveButton?.isVisible = false
+                delButton?.isVisible = false
+                saveButton?.isVisible = false
         
         // COMMENTED OUT: Original menu visibility logic
 //        if (editGuid.isNotEmpty()) {
