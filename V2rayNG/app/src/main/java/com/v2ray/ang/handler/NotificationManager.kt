@@ -239,7 +239,6 @@ object NotificationManager {
         }
         text.append("•  ${up.toLong().toSpeedString()}↑  ${down.toLong().toSpeedString()}↓\n")
     }
-
     /**
      * Gets the service instance.
      * @return The service instance.
