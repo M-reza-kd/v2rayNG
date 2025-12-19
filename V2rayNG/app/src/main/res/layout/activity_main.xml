@@ -166,6 +166,14 @@
                         android:textSize="14sp"
                         android:maxLines="3" />
 
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/btn_retry_registration"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/padding_spacing_dp8"
+                        android:text="Retry"
+                        android:visibility="gone" />
+
                 </LinearLayout>
             </androidx.coordinatorlayout.widget.CoordinatorLayout>
         </RelativeLayout>

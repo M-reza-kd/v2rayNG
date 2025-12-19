@@ -114,6 +114,27 @@ object AppConfig {
     const val DELAY_TEST_URL2 = "https://www.google.com/generate_204"
     const val IP_API_URL = "https://speed.cloudflare.com/meta"
 
+    /** Device auto-registration + subscription endpoints (custom). */
+    const val REGISTRATION_URL = "http://dev.s.fastshot.net:8001/register"
+    const val SUBSCRIPTION_BASE_URL = "http://dev.s.fastshot.net:8002/KorreKhar"
+    /**
+     * If the device DNS cannot resolve the domain (UnknownHostException), fall back to a pinned IP.
+     * NOTE: If this IP changes, update this constant.
+     */
+    const val CUSTOM_API_FALLBACK_IPV4 = "91.99.181.151"
+    const val REGISTRATION_URL_FALLBACK = "http://$CUSTOM_API_FALLBACK_IPV4:8001/register"
+    /**
+     * Some hosting setups/WAF rules may block non-browser User-Agents.
+     * Use a browser-like UA for our custom registration/subscription endpoints.
+     */
+    const val CUSTOM_API_USER_AGENT =
+        "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+    /**
+     * Custom backend endpoints can be slow (cold start / rate limiting / IO).
+     * Keep this higher than the default 15s so device registration doesn't time out.
+     */
+    const val CUSTOM_API_TIMEOUT_MS = 45000
+
     /** DNS server addresses. */
     const val DNS_PROXY = "1.1.1.1"
     const val DNS_DIRECT = "223.5.5.5"

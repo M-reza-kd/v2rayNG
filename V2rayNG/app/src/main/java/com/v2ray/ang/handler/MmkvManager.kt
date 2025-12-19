@@ -28,6 +28,7 @@ object MmkvManager {
     private const val KEY_ANG_CONFIGS = "ANG_CONFIGS"
     private const val KEY_SUB_IDS = "SUB_IDS"
     private const val KEY_USER_CREDENTIALS = "USER_CREDENTIALS"
+    private const val KEY_DEVICE_UUID = "DEVICE_UUID"
 
     // private val profileStorage by lazy { MMKV.mmkvWithID(ID_PROFILE_CONFIG,
     // MMKV.MULTI_PROCESS_MODE) }
@@ -580,6 +581,32 @@ object MmkvManager {
      */
     fun decodeStartOnBoot(): Boolean {
         return decodeSettingsBool(PREF_IS_BOOTED, false)
+    }
+
+    // endregion
+
+    // region Device ID
+
+    /**
+     * Saves the generated device UUID.
+     */
+    fun saveDeviceUuid(uuid: String) {
+        if (uuid.isBlank()) return
+        mainStorage.encode(KEY_DEVICE_UUID, uuid)
+    }
+
+    /**
+     * Gets the saved device UUID.
+     */
+    fun getDeviceUuid(): String? {
+        return mainStorage.decodeString(KEY_DEVICE_UUID)
+    }
+
+    /**
+     * Clears the saved device UUID.
+     */
+    fun clearDeviceUuid() {
+        mainStorage.remove(KEY_DEVICE_UUID)
     }
 
     // endregion

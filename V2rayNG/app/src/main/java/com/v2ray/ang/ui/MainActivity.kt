@@ -36,6 +36,8 @@ import com.v2ray.ang.extension.toast
 import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.handler.AngConfigManager
 import com.v2ray.ang.handler.AuthManager
+import com.v2ray.ang.handler.AutoRegistrationService
+import com.v2ray.ang.handler.DeviceIdManager
 import com.v2ray.ang.handler.MigrateManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.V2RayServiceManager
@@ -77,6 +79,8 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
             }
     private var mItemTouchHelper: ItemTouchHelper? = null
     val mainViewModel: MainViewModel by viewModels()
+
+    private var isRegistrationInProgress: Boolean = false
 
     // register activity result for requesting permission
     private val requestPermissionLauncher =
@@ -134,12 +138,13 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Check if user is logged in, if not redirect to login
-        if (!AuthManager.isLoggedIn()) {
-            startActivity(Intent(this, LoginActivity::class.java))
-            finish()
-            return
-        }
+        // COMMENTED OUT: Manual login gate removed.
+        // The app now auto-registers the device (UUID -> subscriptionId) on first launch.
+//        if (!AuthManager.isLoggedIn()) {
+//            startActivity(Intent(this, LoginActivity::class.java))
+//            finish()
+//            return
+//        }
 
         setContentView(binding.root)
         title = getString(R.string.title_server)
@@ -265,8 +270,9 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
         setupViewModel()
         migrateLegacy()
 
-        // Auto-fetch subscription data on startup if logged in
-        autoFetchSubscription()
+        // Device auto-registration + config fetch.
+        // If we don't have a stored subscriptionId yet, register this device first.
+        ensureSubscriptionReady(forceRegister = false)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
@@ -333,6 +339,11 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
                     binding.tvConnectionStatus.setTextColor(
                         ContextCompat.getColor(this, android.R.color.darker_gray)
                     )
+
+                    // Clear ping results after disconnecting, since they belong to the last connection.
+                    // Next connection attempt will re-run real ping tests.
+                    val serverGuids = mainViewModel.serversCache.map { it.guid }.toList()
+                    MmkvManager.clearAllTestDelayResults(serverGuids)
                 }
             }
             // Update ping display
@@ -360,11 +371,118 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
         lifecycleScope.launch(Dispatchers.IO) {
             // Check if user is logged in
             if (AuthManager.isLoggedIn()) {
-                val count = AngConfigManager.autoFetchSubscriptionWithAuth()
-                if (count > 0) {
-                    Log.i(AppConfig.TAG, "Auto-fetched $count configs from subscription")
-                    launch(Dispatchers.Main) { mainViewModel.reloadServerList() }
+                // COMMENTED OUT: custom auth-based fetch flow no longer used.
+                // Subscription fetching is handled via built-in subscription update flow after device registration.
+//                val count = AngConfigManager.autoFetchSubscriptionWithAuth()
+//                if (count > 0) {
+//                    Log.i(AppConfig.TAG, "Auto-fetched $count configs from subscription")
+//                    launch(Dispatchers.Main) { mainViewModel.reloadServerList() }
+//                }
+            }
+        }
+    }
+
+    private fun ensureSubscriptionReady(forceRegister: Boolean) {
+        if (isRegistrationInProgress) return
+
+        isRegistrationInProgress = true
+        binding.pbWaiting.isVisible = true
+        binding.btnRetryRegistration.isVisible = false
+        binding.btnRetryRegistration.setOnClickListener(null)
+        binding.fab.isEnabled = false
+        binding.tvConnectionStatus.setOnClickListener(null)
+
+        lifecycleScope.launch {
+            try {
+                // We treat "registered" as: we have a stored subscription entry (key=subId) and can update it.
+                val existingSubId = mainViewModel.subscriptionId
+                val hasStoredSubscription = existingSubId.isNotBlank() && MmkvManager.decodeSubscription(existingSubId) != null
+
+                val needsRegister = forceRegister || !hasStoredSubscription
+                val activeSubId = if (needsRegister) {
+                    binding.tvConnectionStatus.text = "Registering device..."
+                    binding.tvConnectionStatus.setTextColor(
+                        ContextCompat.getColor(this@MainActivity, android.R.color.darker_gray)
+                    )
+
+                    val deviceId = DeviceIdManager.getDeviceId()
+                    val regResult = AutoRegistrationService.registerDevice(deviceId)
+                    if (regResult.isFailure) {
+                        throw (regResult.exceptionOrNull() ?: IllegalStateException("Registration failed"))
+                    }
+
+                    val subId = regResult.getOrThrow()
+                    Log.i(AppConfig.TAG, "Device registered successfully; subscriptionId=$subId")
+                    subId
+                } else {
+                    existingSubId
                 }
+
+                // Upsert subscription entry using built-in subscription system.
+                val subUrl = "${AppConfig.SUBSCRIPTION_BASE_URL.trimEnd('/')}/$activeSubId"
+                val subItem =
+                    MmkvManager.decodeSubscription(activeSubId) ?: com.v2ray.ang.dto.SubscriptionItem()
+                subItem.remarks = "KorreKhar"
+                subItem.url = subUrl
+                subItem.enabled = true
+                subItem.allowInsecureUrl = true // required because URL is http:// on a public host
+                subItem.userAgent = AppConfig.CUSTOM_API_USER_AGENT
+                MmkvManager.encodeSubscription(activeSubId, subItem)
+
+                // Select this subscription for filtering (even if tabs are hidden).
+                if (mainViewModel.subscriptionId != activeSubId) {
+                    mainViewModel.subscriptionIdChanged(activeSubId)
+                }
+
+                binding.tvConnectionStatus.text = "Fetching configs..."
+                binding.tvConnectionStatus.setTextColor(
+                    ContextCompat.getColor(this@MainActivity, android.R.color.darker_gray)
+                )
+
+                Log.i(AppConfig.TAG, "Built-in subscription fetch: subId=$activeSubId url=$subUrl")
+
+                val importedCount = withContext(Dispatchers.IO) {
+                    // Use the app's own subscription update flow.
+                    mainViewModel.updateConfigViaSubAll()
+                }
+
+                Log.i(AppConfig.TAG, "Subscription fetch finished; importedCount=$importedCount")
+
+                mainViewModel.reloadServerList()
+                updateSubscriptionInfo()
+                updatePingDisplay()
+
+                val hasServers = mainViewModel.serversCache.isNotEmpty()
+                if (hasServers) {
+                    Log.i(AppConfig.TAG, "Subscription ready; servers=${mainViewModel.serversCache.size}, imported=$importedCount")
+                    binding.fab.isEnabled = true
+                    binding.btnRetryRegistration.isVisible = false
+                    if (mainViewModel.isRunning.value != true) {
+                        binding.tvConnectionStatus.text = "Not Connected"
+                        binding.tvConnectionStatus.setTextColor(
+                            ContextCompat.getColor(this@MainActivity, android.R.color.darker_gray)
+                        )
+                    }
+                } else {
+                    throw IllegalStateException("No configs available")
+                }
+            } catch (e: Exception) {
+                Log.e(
+                    AppConfig.TAG,
+                    "Subscription setup failed: ${e.javaClass.name}: ${e.message}\n${Log.getStackTraceString(e)}"
+                )
+                binding.fab.isEnabled = false
+                binding.tvConnectionStatus.text = "Setup failed. Please retry."
+                binding.tvConnectionStatus.setTextColor(
+                    ContextCompat.getColor(this@MainActivity, android.R.color.holo_red_dark)
+                )
+                binding.btnRetryRegistration.isVisible = true
+                binding.btnRetryRegistration.setOnClickListener {
+                    ensureSubscriptionReady(forceRegister = false)
+                }
+            } finally {
+                binding.pbWaiting.isVisible = false
+                isRegistrationInProgress = false
             }
         }
     }
@@ -859,9 +977,14 @@ class MainActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedList
                             }
                             // Clear credentials
                             AuthManager.logout()
-                            // Redirect to login
-                            startActivity(Intent(this, LoginActivity::class.java))
-                            finish()
+
+                            // Clear UI state immediately
+                            mainViewModel.reloadServerList()
+                            updateSubscriptionInfo()
+                            updatePingDisplay()
+
+                            // Re-register this device and fetch configs again
+                            ensureSubscriptionReady(forceRegister = true)
                         }
                         .setNegativeButton(android.R.string.cancel, null)
                         .show()

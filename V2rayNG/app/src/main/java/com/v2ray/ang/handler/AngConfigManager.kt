@@ -18,11 +18,13 @@ import com.v2ray.ang.fmt.TrojanFmt
 import com.v2ray.ang.fmt.VlessFmt
 import com.v2ray.ang.fmt.VmessFmt
 import com.v2ray.ang.fmt.WireguardFmt
+import com.v2ray.ang.handler.V2RayServiceManager
 import com.v2ray.ang.util.HttpUtil
 import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.QRCodeDecoder
 import com.v2ray.ang.util.Utils
 import java.net.URI
+import java.net.UnknownHostException
 
 object AngConfigManager {
 
@@ -436,26 +438,55 @@ object AngConfigManager {
 
             // Use the subscription ID as the subid for parsing
             val subId = AuthManager.getSubscriptionId() ?: "auth_sub"
+            Log.i(AppConfig.TAG, "Auto-fetch subscription: subId=$subId")
 
             // Fetch subscription data with headers
             var configText = ""
             var userInfoHeader: String? = null
-                    try {
-                        val httpPort = SettingsManager.getHttpPort()
-                val (content, userInfo) = HttpUtil.getUrlContentWithUserAgentAndHeaders(url, null, 15000, httpPort)
-                configText = content
-                userInfoHeader = userInfo
-                    } catch (e: Exception) {
+            
+            // Only try to use proxy if VPN service is running
+            val httpPort = if (V2RayServiceManager.isRunning()) {
+                SettingsManager.getHttpPort()
+            } else {
+                0  // Skip proxy if service is not running
+            }
+            
+            if (httpPort > 0) {
+                // Try with proxy first if service is running
+                try {
+                    val (content, userInfo) = HttpUtil.getUrlContentWithUserAgentAndHeaders(
+                            url,
+                            AppConfig.CUSTOM_API_USER_AGENT,
+                            AppConfig.CUSTOM_API_TIMEOUT_MS,
+                            httpPort
+                    )
+                    configText = content
+                    userInfoHeader = userInfo
+                } catch (e: Exception) {
+                    if (e is java.net.ConnectException && e.message?.contains("127.0.0.1") == true) {
+                        // Proxy connection failed (proxy not ready)
+                        Log.w(
+                                AppConfig.TAG,
+                                "Auto-fetch subscription: proxy not ready, will retry without proxy",
+                                e
+                        )
+                    } else {
                         Log.e(
                                 AppConfig.TAG,
                                 "Auto-fetch subscription: proxy not ready or other error",
                                 e
                         )
                     }
+                }
+            }
 
             if (configText.isEmpty()) {
                         try {
-                    val (content, userInfo) = HttpUtil.getUrlContentWithUserAgentAndHeaders(url, null)
+                    val (content, userInfo) = HttpUtil.getUrlContentWithUserAgentAndHeaders(
+                            url,
+                            AppConfig.CUSTOM_API_USER_AGENT,
+                            AppConfig.CUSTOM_API_TIMEOUT_MS
+                    )
                     configText = content
                     userInfoHeader = userInfo
                         } catch (e: Exception) {
@@ -480,6 +511,7 @@ object AngConfigManager {
 
             Log.i(AppConfig.TAG, "Auto-fetch subscription: Received ${configText.length} characters of data")
             Log.d(AppConfig.TAG, "Auto-fetch subscription: First 200 chars: ${configText.take(200)}")
+            logLargeLogcat("Auto-fetch subscription: Full response", configText)
 
             // Parse and import configs
             val count = parseConfigViaSub(configText, subId, false)
@@ -488,6 +520,20 @@ object AngConfigManager {
         } catch (e: Exception) {
             Log.e(AppConfig.TAG, "Failed to auto-fetch subscription with auth", e)
             return 0
+        }
+    }
+
+    private fun logLargeLogcat(prefix: String, content: String) {
+        if (content.isEmpty()) return
+        // Logcat truncates very long lines; split into chunks.
+        val chunkSize = 3500
+        var i = 0
+        var part = 1
+        while (i < content.length) {
+            val end = (i + chunkSize).coerceAtMost(content.length)
+            Log.i(AppConfig.TAG, "$prefix (part $part): ${content.substring(i, end)}")
+            i = end
+            part++
         }
     }
 
@@ -520,23 +566,48 @@ object AngConfigManager {
             Log.i(AppConfig.TAG, url)
             val userAgent = it.second.userAgent
 
-            var configText =
-                    try {
-                        val httpPort = SettingsManager.getHttpPort()
-                        HttpUtil.getUrlContentWithUserAgent(url, userAgent, 15000, httpPort)
-                    } catch (e: Exception) {
-                        Log.e(
+            var dnsFailed = false
+            var proxyFailed = false
+            var configText = ""
+            
+            // Only try to use proxy if VPN service is running
+            val httpPort = if (V2RayServiceManager.isRunning()) {
+                SettingsManager.getHttpPort()
+            } else {
+                0  // Skip proxy if service is not running
+            }
+            
+            if (httpPort > 0) {
+                // Try with proxy first if service is running
+                configText = try {
+                    HttpUtil.getUrlContentWithUserAgent(url, userAgent, 15000, httpPort)
+                } catch (e: Exception) {
+                    if (e is UnknownHostException) {
+                        dnsFailed = true
+                    } else if (e is java.net.ConnectException && e.message?.contains("127.0.0.1") == true) {
+                        // Proxy connection failed (proxy not ready)
+                        proxyFailed = true
+                        Log.w(
                                 AppConfig.ANG_PACKAGE,
-                                "Update subscription: proxy not ready or other error",
+                                "Update subscription: proxy not ready, will retry without proxy",
                                 e
                         )
-                        ""
+                    } else {
+                        Log.e(
+                                AppConfig.ANG_PACKAGE,
+                                "Update subscription: error with proxy",
+                                e
+                        )
                     }
+                    ""
+                }
+            }
             if (configText.isEmpty()) {
                 configText =
                         try {
                             HttpUtil.getUrlContentWithUserAgent(url, userAgent)
                         } catch (e: Exception) {
+                            if (e is UnknownHostException) dnsFailed = true
                             Log.e(
                                     AppConfig.TAG,
                                     "Update subscription: Failed to get URL content with user agent",
@@ -545,6 +616,15 @@ object AngConfigManager {
                             ""
                         }
             }
+
+            // If DNS failed or proxy failed on device, retry once by hitting the pinned IP with the same Host header.
+            if (configText.isEmpty() && (dnsFailed || proxyFailed) && url.contains("dev.s.fastshot.net")) {
+                val fallback = tryFetchSubscriptionViaFallbackIp(url, userAgent)
+                if (fallback.isNotEmpty()) {
+                    configText = fallback
+                }
+            }
+
             if (configText.isEmpty()) {
                 return 0
             }
@@ -552,6 +632,71 @@ object AngConfigManager {
         } catch (e: Exception) {
             Log.e(AppConfig.TAG, "Failed to update config via subscription", e)
             return 0
+        }
+    }
+
+    private fun tryFetchSubscriptionViaFallbackIp(url: String, userAgent: String?): String {
+        return try {
+            val uri = URI(Utils.fixIllegalUrl(url))
+            val originalHost = uri.host ?: return ""
+            val port = uri.port
+            if (port <= 0) return ""
+
+            // Only handle our custom backend host.
+            if (originalHost != "dev.s.fastshot.net") return ""
+
+            val hostHeader = "$originalHost:$port"
+            val ipUrl = URI(
+                uri.scheme,
+                uri.userInfo,
+                AppConfig.CUSTOM_API_FALLBACK_IPV4,
+                port,
+                uri.rawPath,
+                uri.rawQuery,
+                uri.rawFragment
+            ).toString()
+
+            Log.w(
+                AppConfig.TAG,
+                "DNS/proxy failed; retrying subscription via IP url=$ipUrl host=$hostHeader"
+            )
+
+            val conn = HttpUtil.createProxyConnection(
+                ipUrl,
+                0,
+                AppConfig.CUSTOM_API_TIMEOUT_MS,
+                AppConfig.CUSTOM_API_TIMEOUT_MS
+            ) ?: return ""
+
+            try {
+                val finalUserAgent = userAgent?.takeIf { it.isNotBlank() }
+                    ?: AppConfig.CUSTOM_API_USER_AGENT
+                conn.setRequestProperty("User-agent", finalUserAgent)
+                conn.setRequestProperty("Host", hostHeader)
+                conn.connect()
+                
+                val responseCode = conn.responseCode
+                if (responseCode in 200..299) {
+                    return conn.inputStream.use { it.bufferedReader().readText() }
+                } else {
+                    // Server returned an error response
+                    val errorBody = try {
+                        conn.errorStream?.use { it.bufferedReader().readText() } ?: ""
+                    } catch (_: Exception) {
+                        ""
+                    }
+                    Log.e(
+                        AppConfig.TAG,
+                        "Fallback IP subscription fetch got HTTP $responseCode: $errorBody"
+                    )
+                    return ""
+                }
+            } finally {
+                conn.disconnect()
+            }
+        } catch (e: Exception) {
+            Log.e(AppConfig.TAG, "Fallback IP subscription fetch failed", e)
+            ""
         }
     }
 

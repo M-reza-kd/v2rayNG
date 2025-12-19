@@ -8,14 +8,16 @@ object AuthManager {
 
     /**
      * Builds the subscription URL using the stored credentials.
-     * Returns the full URL with the subscription ID as a token parameter.
+     *
+     * Subscription URL shape:
+     *   {subscriptionBaseUrl}/{subscriptionId}
      *
      * @return The full subscription URL, or null if credentials are not available.
      */
     fun getSubscriptionUrl(): String? {
         val credentials = MmkvManager.getUserCredentials() ?: return null
-        
-        if (!credentials.isLoggedIn || credentials.subscriptionId.isEmpty() || credentials.serverUrl.isEmpty()) {
+
+        if (credentials.subscriptionId.isBlank() || credentials.serverUrl.isBlank()) {
             return null
         }
 
@@ -25,24 +27,35 @@ object AuthManager {
     /**
      * Builds a subscription URL from server URL and subscription ID.
      *
-     * @param serverUrl The base server URL.
-     * @param subscriptionId The subscription ID (used as token).
+     * @param serverUrl The subscription base URL.
+     * @param subscriptionId The subscription ID.
      * @return The full subscription URL.
      */
     fun buildSubscriptionUrl(serverUrl: String, subscriptionId: String): String {
         // Remove trailing slash from server URL if present
         val baseUrl = serverUrl.trimEnd('/')
-        // Build the subscription URL: /api/subscription?token=subscriptionId
+        // Build the subscription URL: {baseUrl}/{subscriptionId}
         return "$baseUrl/$subscriptionId"
     }
 
     /**
-     * Checks if the user is currently logged in.
+     * Checks if the device is registered (i.e., we have a subscription id stored).
+     */
+    fun isDeviceRegistered(): Boolean {
+        val credentials = MmkvManager.getUserCredentials() ?: return false
+        return credentials.subscriptionId.isNotBlank() && credentials.serverUrl.isNotBlank()
+    }
+
+    /**
+     * Checks if the user is currently "logged in".
+     *
+     * In the device-registration flow, "logged in" simply means the device has been registered
+     * and we have a subscription id stored.
      *
      * @return True if user is logged in with valid credentials.
      */
     fun isLoggedIn(): Boolean {
-        return MmkvManager.isUserLoggedIn()
+        return isDeviceRegistered()
     }
 
     /**
@@ -70,7 +83,7 @@ object AuthManager {
      * @return The subscription ID, or null if not logged in.
      */
     fun getSubscriptionId(): String? {
-        return MmkvManager.getUserCredentials()?.subscriptionId
+        return MmkvManager.getUserCredentials()?.subscriptionId?.takeIf { it.isNotBlank() }
     }
 }
 
