@@ -568,6 +568,7 @@ object AngConfigManager {
 
             var dnsFailed = false
             var proxyFailed = false
+            var connectionFailed = false
             var configText = ""
             
             // Only try to use proxy if VPN service is running
@@ -607,18 +608,30 @@ object AngConfigManager {
                         try {
                             HttpUtil.getUrlContentWithUserAgent(url, userAgent)
                         } catch (e: Exception) {
-                            if (e is UnknownHostException) dnsFailed = true
-                            Log.e(
-                                    AppConfig.TAG,
-                                    "Update subscription: Failed to get URL content with user agent",
-                                    e
-                            )
+                            if (e is UnknownHostException) {
+                                dnsFailed = true
+                            } else if (e is java.net.ProtocolException || 
+                                      (e is java.io.IOException && e.message?.contains("prematurely") == true)) {
+                                // ProtocolException or premature connection close - treat as network issue
+                                connectionFailed = true
+                                Log.w(
+                                        AppConfig.TAG,
+                                        "Update subscription: Connection issue, will try fallback",
+                                        e
+                                )
+                            } else {
+                                Log.e(
+                                        AppConfig.TAG,
+                                        "Update subscription: Failed to get URL content with user agent",
+                                        e
+                                )
+                            }
                             ""
                         }
             }
 
-            // If DNS failed or proxy failed on device, retry once by hitting the pinned IP with the same Host header.
-            if (configText.isEmpty() && (dnsFailed || proxyFailed) && url.contains("dev.s.fastshot.net")) {
+            // If DNS failed, proxy failed, or connection issue on device, retry once by hitting the pinned IP with the same Host header.
+            if (configText.isEmpty() && (dnsFailed || proxyFailed || connectionFailed) && url.contains("dev.s.fastshot.net")) {
                 val fallback = tryFetchSubscriptionViaFallbackIp(url, userAgent)
                 if (fallback.isNotEmpty()) {
                     configText = fallback

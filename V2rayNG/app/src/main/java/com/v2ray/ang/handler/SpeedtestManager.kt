@@ -53,7 +53,20 @@ object SpeedtestManager {
         return try {
             Libv2ray.measureOutboundDelay(config, SettingsManager.getDelayTestUrl())
         } catch (e: Exception) {
-            Log.e(AppConfig.TAG, "Failed to measure outbound delay", e)
+            // Check if it's a timeout or network-related error
+            val errorMessage = e.message?.lowercase() ?: ""
+            val isTimeoutError = errorMessage.contains("timeout") || 
+                                errorMessage.contains("handshake") ||
+                                errorMessage.contains("connection") ||
+                                errorMessage.contains("network")
+            
+            if (isTimeoutError) {
+                // Log timeout/network errors as warnings since they're common during speed tests
+                Log.w(AppConfig.TAG, "Failed to measure outbound delay (timeout/network issue): ${e.javaClass.simpleName}", e)
+            } else {
+                // Log other errors as errors
+                Log.e(AppConfig.TAG, "Failed to measure outbound delay", e)
+            }
             -1L
         }
     }

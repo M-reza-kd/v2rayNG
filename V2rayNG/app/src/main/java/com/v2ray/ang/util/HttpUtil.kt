@@ -13,6 +13,7 @@ import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.MalformedURLException
+import java.net.ProtocolException
 import java.net.Proxy
 import java.net.URI
 import java.net.URL
@@ -171,12 +172,38 @@ object HttpUtil {
                     continue
                 }
 
-                else -> try {
-                    val content = conn.inputStream.use { it.bufferedReader().readText() }
-                    val userInfo = conn.getHeaderField("subscription-userinfo")
-                    return Pair(content, userInfo)
-                } finally {
-                    conn.disconnect()
+                in 200..299 -> {
+                    // Success response
+                    try {
+                        val content = try {
+                            conn.inputStream.use { it.bufferedReader().readText() }
+                        } catch (e: ProtocolException) {
+                            // Handle premature connection close - this can happen with network issues
+                            Log.w(AppConfig.TAG, "ProtocolException: connection closed prematurely (responseCode=$responseCode), will retry", e)
+                            // Re-throw as IOException so caller can handle retry/fallback
+                            throw IOException("Connection closed prematurely: ${e.message}", e)
+                        }
+                        val userInfo = conn.getHeaderField("subscription-userinfo")
+                        return Pair(content, userInfo)
+                    } finally {
+                        conn.disconnect()
+                    }
+                }
+
+                else -> {
+                    // Error response (4xx, 5xx, etc.)
+                    try {
+                        val errorContent = try {
+                            conn.errorStream?.use { it.bufferedReader().readText() } ?: ""
+                        } catch (e: Exception) {
+                            Log.w(AppConfig.TAG, "Failed to read error stream, responseCode=$responseCode", e)
+                            ""
+                        }
+                        conn.disconnect()
+                        throw IOException("HTTP error $responseCode: $errorContent")
+                    } finally {
+                        conn.disconnect()
+                    }
                 }
             }
         }
