@@ -125,12 +125,19 @@ object HttpUtil {
      * @param url The URL to fetch content from.
      * @param timeout The timeout value in milliseconds.
      * @param httpPort The HTTP port to use.
+     * @param useApiAuth Whether to add API authentication headers (default: false).
      * @return The content of the URL as a string.
      * @throws IOException If an I/O error occurs.
      */
     @Throws(IOException::class)
-    fun getUrlContentWithUserAgent(url: String?, userAgent: String?,  timeout: Int = 15000, httpPort: Int = 0): String {
-        return getUrlContentWithUserAgentAndHeaders(url, userAgent, timeout, httpPort).first
+    fun getUrlContentWithUserAgent(
+        url: String?, 
+        userAgent: String?,  
+        timeout: Int = 15000, 
+        httpPort: Int = 0,
+        useApiAuth: Boolean = false
+    ): String {
+        return getUrlContentWithUserAgentAndHeaders(url, userAgent, timeout, httpPort, useApiAuth).first
     }
 
     /**
@@ -140,11 +147,18 @@ object HttpUtil {
      * @param userAgent The user agent string.
      * @param timeout The timeout value in milliseconds.
      * @param httpPort The HTTP port to use.
+     * @param useApiAuth Whether to add API authentication headers (default: false).
      * @return Pair of content string and subscription-userinfo header (if present).
      * @throws IOException If an I/O error occurs.
      */
     @Throws(IOException::class)
-    fun getUrlContentWithUserAgentAndHeaders(url: String?, userAgent: String?, timeout: Int = 15000, httpPort: Int = 0): Pair<String, String?> {
+    fun getUrlContentWithUserAgentAndHeaders(
+        url: String?, 
+        userAgent: String?, 
+        timeout: Int = 15000, 
+        httpPort: Int = 0,
+        useApiAuth: Boolean = false
+    ): Pair<String, String?> {
         var currentUrl = url
         var redirects = 0
         val maxRedirects = 3
@@ -158,6 +172,15 @@ object HttpUtil {
                 userAgent
             }
             conn.setRequestProperty("User-agent", finalUserAgent)
+            
+            // Add API authentication headers if requested
+            if (useApiAuth && currentUrl != null) {
+                val authHeaders = com.v2ray.ang.util.ApiSecurityUtil.createAuthHeaders("GET", currentUrl)
+                authHeaders.forEach { (key, value) ->
+                    conn.setRequestProperty(key, value)
+                }
+            }
+            
             conn.connect()
 
             val responseCode = conn.responseCode

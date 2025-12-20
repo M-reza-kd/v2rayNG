@@ -38,11 +38,13 @@ object AutoRegistrationService {
 
                 val response = try {
                     // Some setups may block non-browser User-Agents; use a browser-like UA.
+                    // Enable API authentication to secure the request
                     HttpUtil.getUrlContentWithUserAgent(
                         primaryUrl,
                         AppConfig.CUSTOM_API_USER_AGENT,
                         AppConfig.CUSTOM_API_TIMEOUT_MS,
-                        0
+                        0,
+                        useApiAuth = true  // Enable API authentication
                     )
                 } catch (e: UnknownHostException) {
                     // Device DNS cannot resolve the domain; fall back to pinned IP.
@@ -55,7 +57,8 @@ object AutoRegistrationService {
                         fallbackUrl,
                         AppConfig.CUSTOM_API_USER_AGENT,
                         AppConfig.CUSTOM_API_TIMEOUT_MS,
-                        0
+                        0,
+                        useApiAuth = true  // Enable API authentication
                     )
                 }
 

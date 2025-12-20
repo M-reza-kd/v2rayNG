@@ -458,7 +458,8 @@ object AngConfigManager {
                             url,
                             AppConfig.CUSTOM_API_USER_AGENT,
                             AppConfig.CUSTOM_API_TIMEOUT_MS,
-                            httpPort
+                            httpPort,
+                            useApiAuth = true  // Enable API authentication
                     )
                     configText = content
                     userInfoHeader = userInfo
@@ -485,7 +486,9 @@ object AngConfigManager {
                     val (content, userInfo) = HttpUtil.getUrlContentWithUserAgentAndHeaders(
                             url,
                             AppConfig.CUSTOM_API_USER_AGENT,
-                            AppConfig.CUSTOM_API_TIMEOUT_MS
+                            AppConfig.CUSTOM_API_TIMEOUT_MS,
+                            0,
+                            useApiAuth = true  // Enable API authentication
                     )
                     configText = content
                     userInfoHeader = userInfo
@@ -686,6 +689,15 @@ object AngConfigManager {
                     ?: AppConfig.CUSTOM_API_USER_AGENT
                 conn.setRequestProperty("User-agent", finalUserAgent)
                 conn.setRequestProperty("Host", hostHeader)
+                
+                // Add API authentication headers for custom backend
+                if (originalHost == "dev.s.fastshot.net") {
+                    val authHeaders = com.v2ray.ang.util.ApiSecurityUtil.createAuthHeaders("GET", ipUrl)
+                    authHeaders.forEach { (key, value) ->
+                        conn.setRequestProperty(key, value)
+                    }
+                }
+                
                 conn.connect()
                 
                 val responseCode = conn.responseCode
